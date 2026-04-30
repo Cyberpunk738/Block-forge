@@ -1,0 +1,135 @@
+@import "tailwindcss";
+
+/* ─── Custom Theme — Light Black & White ─── */
+@theme {
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #fafafa;
+  --color-bg-tertiary: #f3f3f3;
+  --color-bg-hover: #eeeeee;
+  --color-bg-active: #e5e5e5;
+
+  --color-border-default: #e0e0e0;
+  --color-border-hover: #cccccc;
+  --color-border-focus: #000000;
+
+  --color-text-primary: #111111;
+  --color-text-secondary: #555555;
+  --color-text-muted: #999999;
+  --color-text-placeholder: #bbbbbb;
+
+  --color-accent: #111111;
+  --color-accent-hover: #333333;
+  --color-accent-subtle: rgba(0, 0, 0, 0.05);
+
+  --color-danger: #555555;
+  --color-danger-hover: #333333;
+  --color-danger-subtle: rgba(0, 0, 0, 0.04);
+
+  --color-success: #444444;
+  --color-success-subtle: rgba(0, 0, 0, 0.04);
+}
+
+/* ─── Base Reset ─── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  line-height: 1.6;
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-default);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-hover);
+}
+
+/* ─── Selection ─── */
+::selection {
+  background: rgba(0, 0, 0, 0.12);
+  color: #000000;
+}
+
+/* ─── Focus Ring Utility ─── */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+/* ─── Block Transitions ─── */
+.block-enter {
+  animation: blockSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes blockSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ─── Drag Overlay ─── */
+.drag-overlay {
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  opacity: 0.95;
+}
+
+/* ─── Sortable Ghost ─── */
+.sortable-ghost {
+  opacity: 0.3;
+}
+
+/* ─── Subtle background pattern ─── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: radial-gradient(
+    circle at 50% 0%,
+    rgba(0, 0, 0, 0.02) 0%,
+    transparent 60%
+  );
+  pointer-events: none;
+}
+
