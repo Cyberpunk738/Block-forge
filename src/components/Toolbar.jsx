@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
-import { Undo2, Redo2, Layers, Trash2, Download } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { Undo2, Redo2, Layers, Trash2, Download, FileUp, Loader2 } from 'lucide-react';
 import useStore from '../store/useStore';
+import { convertDocumentToBlocks } from '../utils/documentImport';
 import ExportModal from './ExportModal';
 
 /**
@@ -15,7 +16,32 @@ const Toolbar = () => {
   const redo = useStore((s) => s.redo);
   const clearAll = useStore((s) => s.clearAll);
 
+  const replaceAllBlocks = useStore((s) => s.replaceAllBlocks);
+
   const [showExport, setShowExport] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileImport = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    try {
+      const newBlocks = await convertDocumentToBlocks(file);
+      if (newBlocks.length > 0) {
+        replaceAllBlocks(newBlocks);
+      }
+    } catch {
+      // silently fail — user can use the modal for detailed errors
+    } finally {
+      setImporting(false);
+      e.target.value = '';
+    }
+  };
 
   const canUndo = past.length > 0;
   const canRedo = future.length > 0;
@@ -111,6 +137,28 @@ const Toolbar = () => {
           >
             <Download size={15} />
             <span className="hidden sm:inline">Export</span>
+          </button>
+
+          {/* Import Document */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".txt,.docx"
+            onChange={handleFileImport}
+            className="hidden"
+          />
+          <button
+            id="toolbar-import"
+            onClick={handleImportClick}
+            disabled={importing}
+            title="Import document (.txt, .docx)"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium
+                       transition-all duration-150
+                       text-text-secondary hover:text-text-primary hover:bg-bg-hover
+                       disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {importing ? <Loader2 size={15} className="animate-spin" /> : <FileUp size={15} />}
+            <span className="hidden sm:inline">{importing ? 'Importing...' : 'Import'}</span>
           </button>
 
           {/* Divider */}

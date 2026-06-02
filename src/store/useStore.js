@@ -207,6 +207,18 @@ const useStore = create((set, get) => ({
     set({ blocks: [] });
     saveToStorage([]);
   },
+
+  /**
+   * Replace all blocks with a new array (used for imports).
+   */
+  replaceAllBlocks: (newBlocks) => {
+    const state = get();
+    if (state.blocks.length > 0) {
+      state._pushToHistory();
+    }
+    set({ blocks: newBlocks });
+    saveToStorage(newBlocks);
+  },
 }));
 
 export default useStore;

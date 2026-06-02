@@ -1,18 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { Download, Upload, X, Copy, Check, FileJson, FileText } from 'lucide-react';
+import { Download, Upload, X, Copy, Check, FileJson, FileText, FileUp, Loader2 } from 'lucide-react';
 import useStore from '../store/useStore';
+import { convertDocumentToBlocks } from '../utils/documentImport';
 
-/**
- * ExportModal — Modal for exporting/importing blocks as JSON or Markdown.
- *
- * Props:
- * - isOpen: boolean — Whether the modal is visible
- * - onClose: () => void — Callback to close the modal
- */
-
-/**
- * Convert blocks array to a Markdown string.
- */
 const blocksToMarkdown = (blocks) => {
   return blocks.map((block) => {
     switch (block.type) {
@@ -61,13 +51,27 @@ const blocksToMarkdown = (blocks) => {
 
 const ExportModal = ({ isOpen, onClose }) => {
   const blocks = useStore((s) => s.blocks);
-  const [tab, setTab] = useState('json'); // 'json' | 'markdown' | 'import'
+  const replaceAllBlocks = useStore((s) => s.replaceAllBlocks);
+  const [tab, setTab] = useState('json');
   const [copied, setCopied] = useState(false);
   const [importText, setImportText] = useState('');
   const [importError, setImportError] = useState('');
   const modalRef = useRef(null);
 
-  // Close on Escape
+  // Document import state
+  const [docFile, setDocFile] = useState(null);
+  const [docImporting, setDocImporting] = useState(false);
+  const [docError, setDocError] = useState('');
+  const fileInputRef = useRef(null);
+
+  const switchTab = (key) => {
+    setTab(key);
+    setCopied(false);
+    setDocFile(null);
+    setDocError('');
+    setDocImporting(false);
+  };
+
   useEffect(() => {
     const handleKey = (e) => {
       if (e.key === 'Escape') onClose();
@@ -76,7 +80,6 @@ const ExportModal = ({ isOpen, onClose }) => {
     return () => document.removeEventListener('keydown', handleKey);
   }, [isOpen, onClose]);
 
-  // Close on backdrop click
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget) onClose();
   };
@@ -106,6 +109,48 @@ const ExportModal = ({ isOpen, onClose }) => {
     URL.revokeObjectURL(url);
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setDocFile(file);
+      setDocError('');
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const file = e.dataTransfer?.files?.[0];
+    if (file) {
+      setDocFile(file);
+      setDocError('');
+    }
+  };
+
+  const handleConvertAndImport = async () => {
+    if (!docFile) return;
+    setDocImporting(true);
+    setDocError('');
+    try {
+      const newBlocks = await convertDocumentToBlocks(docFile);
+      if (newBlocks.length === 0) {
+        setDocError('No blocks could be extracted from the document.');
+        return;
+      }
+      replaceAllBlocks(newBlocks);
+      onClose();
+    } catch (err) {
+      setDocError(err.message || 'Failed to convert document.');
+    } finally {
+      setDocImporting(false);
+    }
+  };
+
   const handleImport = () => {
     setImportError('');
     try {
@@ -114,16 +159,14 @@ const ExportModal = ({ isOpen, onClose }) => {
         setImportError('Invalid format: expected an array of blocks.');
         return;
       }
-      // Validate basic block shape
       const valid = parsed.every((b) => b.id && b.type && 'content' in b);
       if (!valid) {
         setImportError('Invalid format: each block needs id, type, and content.');
         return;
       }
-      // Replace blocks in store via localStorage + reload approach
-      localStorage.setItem('blockforge-blocks', JSON.stringify(parsed));
-      window.location.reload();
-    } catch (err) {
+      replaceAllBlocks(parsed);
+      onClose();
+    } catch {
       setImportError('Invalid JSON. Please check your input.');
     }
   };
@@ -165,7 +208,7 @@ const ExportModal = ({ isOpen, onClose }) => {
             <button
               key={key}
               id={`export-tab-${key}`}
-              onClick={() => { setTab(key); setCopied(false); }}
+              onClick={() => switchTab(key)}
               className={`flex items-center gap-2 px-5 py-3 text-sm font-medium
                          transition-colors duration-150 border-b-2
                          ${tab === key
@@ -246,37 +289,114 @@ const ExportModal = ({ isOpen, onClose }) => {
           )}
 
           {tab === 'import' && (
-            <div className="space-y-3">
-              <p className="text-sm text-text-secondary">
-                Paste a BlockForge JSON export to import blocks. 
-                <span className="text-text-muted"> This will replace all current blocks.</span>
-              </p>
-              <textarea
-                id="export-import-textarea"
-                value={importText}
-                onChange={(e) => { setImportText(e.target.value); setImportError(''); }}
-                placeholder='[{"id":"...","type":"text","content":"Hello"}]'
-                rows={8}
-                className="w-full bg-bg-tertiary border border-border-default rounded-lg p-4
-                           text-xs font-mono text-text-primary placeholder-text-placeholder
-                           resize-none outline-none focus:border-border-focus
-                           transition-colors duration-200"
-              />
-              {importError && (
-                <p className="text-xs text-danger">{importError}</p>
-              )}
-              <button
-                id="export-import-btn"
-                onClick={handleImport}
-                disabled={!importText.trim()}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
-                           bg-accent text-white hover:bg-accent-hover 
-                           disabled:opacity-40 disabled:cursor-not-allowed
-                           transition-colors duration-150"
-              >
-                <Upload size={15} />
-                Import Blocks
-              </button>
+            <div className="space-y-5">
+              {/* Document Import */}
+              <div>
+                <h3 className="text-sm font-semibold text-text-primary mb-2 flex items-center gap-2">
+                  <FileUp size={15} />
+                  Import Document
+                </h3>
+                <p className="text-xs text-text-secondary mb-3">
+                  Upload a <strong>.txt</strong> or <strong>.docx</strong> file to convert it into blocks.
+                </p>
+
+                <div
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-border-default rounded-lg p-5
+                             text-center cursor-pointer hover:border-accent/50 
+                             hover:bg-bg-hover/30 transition-colors duration-150"
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".txt,.docx"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+
+                  {docFile ? (
+                    <div className="space-y-2">
+                      <FileText size={24} className="mx-auto text-accent" />
+                      <p className="text-sm font-medium text-text-primary">{docFile.name}</p>
+                      <p className="text-xs text-text-muted">
+                        {(docFile.size / 1024).toFixed(1)} KB
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Upload size={24} className="mx-auto text-text-muted" />
+                      <p className="text-sm text-text-secondary">
+                        Drop a file here or click to browse
+                      </p>
+                      <p className="text-xs text-text-muted">.txt or .docx files only</p>
+                    </div>
+                  )}
+                </div>
+
+                {docError && (
+                  <p className="text-xs text-danger mt-2">{docError}</p>
+                )}
+
+                <button
+                  id="export-import-doc-btn"
+                  onClick={handleConvertAndImport}
+                  disabled={!docFile || docImporting}
+                  className="mt-3 flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
+                             bg-accent text-white hover:bg-accent-hover 
+                             disabled:opacity-40 disabled:cursor-not-allowed
+                             transition-colors duration-150 w-full justify-center"
+                >
+                  {docImporting ? (
+                    <Loader2 size={15} className="animate-spin" />
+                  ) : (
+                    <FileUp size={15} />
+                  )}
+                  {docImporting ? 'Converting...' : 'Convert & Import'}
+                </button>
+              </div>
+
+              {/* Divider */}
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-border-default" />
+                <span className="text-xs text-text-muted font-medium">or</span>
+                <div className="flex-1 h-px bg-border-default" />
+              </div>
+
+              {/* JSON Import */}
+              <div>
+                <p className="text-sm text-text-secondary mb-2">
+                  Paste a BlockForge JSON export to import blocks.
+                  <span className="text-text-muted"> This will replace all current blocks.</span>
+                </p>
+                <textarea
+                  id="export-import-textarea"
+                  value={importText}
+                  onChange={(e) => { setImportText(e.target.value); setImportError(''); }}
+                  placeholder='[{"id":"...","type":"text","content":"Hello"}]'
+                  rows={6}
+                  className="w-full bg-bg-tertiary border border-border-default rounded-lg p-4
+                             text-xs font-mono text-text-primary placeholder-text-placeholder
+                             resize-none outline-none focus:border-border-focus
+                             transition-colors duration-200"
+                />
+                {importError && (
+                  <p className="text-xs text-danger mt-1">{importError}</p>
+                )}
+                <button
+                  id="export-import-btn"
+                  onClick={handleImport}
+                  disabled={!importText.trim()}
+                  className="mt-2 flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
+                             bg-accent text-white hover:bg-accent-hover 
+                             disabled:opacity-40 disabled:cursor-not-allowed
+                             transition-colors duration-150 w-full justify-center"
+                >
+                  <Upload size={15} />
+                  Import Blocks
+                </button>
+              </div>
             </div>
           )}
         </div>
