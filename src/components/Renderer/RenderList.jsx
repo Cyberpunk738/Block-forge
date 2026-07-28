@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import formatInlineMarkdown from '../../utils/formatMarkdown';
 
 /**
  * RenderList — Renders ordered <ol> or unordered <ul> list elements.
@@ -21,7 +22,7 @@ const RenderList = memo(({ content }) => {
     >
       {items.map((item, index) => {
         if (!item || !item.trim()) return null;
-        return <li key={index}>{item}</li>;
+        return <li key={index}>{formatInlineMarkdown(item)}</li>;
       })}
     </ListTag>
   );
@@ -30,3 +31,4 @@ const RenderList = memo(({ content }) => {
 RenderList.displayName = 'RenderList';
 
 export default RenderList;
+

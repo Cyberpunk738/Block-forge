@@ -1,8 +1,9 @@
 import { memo } from 'react';
+import formatInlineMarkdown from '../../utils/formatMarkdown';
 
 /**
  * RenderText — Renders text/paragraph blocks for published output.
- * Preserves line breaks and paragraph spacing without editing inputs.
+ * Formats inline markdown (**bold**, *italic*, `code`, [link](url)).
  */
 const RenderText = memo(({ content }) => {
   const text = typeof content === 'string' ? content : content?.text || '';
@@ -10,8 +11,8 @@ const RenderText = memo(({ content }) => {
   if (!text.trim()) return null;
 
   return (
-    <p className="text-base leading-relaxed text-text-primary whitespace-pre-wrap my-3 font-normal">
-      {text}
+    <p className="text-base leading-relaxed text-text-primary my-3 font-normal">
+      {formatInlineMarkdown(text)}
     </p>
   );
 });
@@ -19,3 +20,4 @@ const RenderText = memo(({ content }) => {
 RenderText.displayName = 'RenderText';
 
 export default RenderText;
+

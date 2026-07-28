@@ -96,58 +96,71 @@ const Toolbar = ({ viewMode = 'split', onViewModeChange }) => {
         </div>
 
         {/* Center/Right: View Mode Selector & Action Controls */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Desktop View Mode Switcher */}
+        <div className="flex items-center gap-2">
+          {/* Desktop View Mode Segmented Control */}
           {onViewModeChange && (
-            <div className="hidden lg:flex items-center gap-0.5 bg-bg-tertiary/70 p-0.5 rounded-lg border border-border-default mr-1">
-              <button
-                onClick={() => onViewModeChange('split')}
-                title="Split View (Editor + Live Preview)"
-                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold transition-all duration-150 focus-ring ${
-                  viewMode === 'split' ? 'bg-bg-primary text-text-primary shadow-xs' : 'text-text-muted hover:text-text-primary'
-                }`}
-              >
-                <Columns size={13} />
-                <span>Split</span>
-              </button>
+            <div className="hidden lg:flex items-center p-1 rounded-xl bg-bg-tertiary border border-border-default shadow-xs">
               <button
                 onClick={() => onViewModeChange('editor')}
-                title="Editor Only"
-                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold transition-all duration-150 focus-ring ${
-                  viewMode === 'editor' ? 'bg-bg-primary text-text-primary shadow-xs' : 'text-text-muted hover:text-text-primary'
+                title="Editor Mode (Focus on writing)"
+                aria-label="Editor view"
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all duration-150 focus-ring ${
+                  viewMode === 'editor'
+                    ? 'bg-accent text-white shadow-sm'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-hover/60'
                 }`}
               >
                 <Edit3 size={13} />
                 <span>Editor</span>
               </button>
+
+              <button
+                onClick={() => onViewModeChange('split')}
+                title="Split Screen (Side-by-side Editor & Preview)"
+                aria-label="Split view"
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all duration-150 focus-ring ${
+                  viewMode === 'split'
+                    ? 'bg-accent text-white shadow-sm'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-hover/60'
+                }`}
+              >
+                <Columns size={13} />
+                <span>Split View</span>
+              </button>
+
               <button
                 onClick={() => onViewModeChange('preview')}
-                title="Preview Only"
-                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold transition-all duration-150 focus-ring ${
-                  viewMode === 'preview' ? 'bg-bg-primary text-text-primary shadow-xs' : 'text-text-muted hover:text-text-primary'
+                title="Live Preview (Published document output)"
+                aria-label="Live preview"
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all duration-150 focus-ring ${
+                  viewMode === 'preview'
+                    ? 'bg-accent text-white shadow-sm'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-hover/60'
                 }`}
               >
                 <Eye size={13} />
-                <span>Preview</span>
+                <span>Live Preview</span>
               </button>
             </div>
           )}
 
-          {/* History Controls */}
-          <div className="flex items-center gap-0.5 bg-bg-tertiary/50 p-0.5 rounded-lg border border-border-default">
+          <div className="hidden lg:block w-px h-5 bg-border-default mx-0.5" />
+
+          {/* History Controls (Undo / Redo) */}
+          <div className="flex items-center gap-0.5 bg-bg-tertiary/70 p-0.5 rounded-lg border border-border-default">
             <button
               id="toolbar-undo"
               onClick={undo}
               disabled={!canUndo}
               title="Undo (Ctrl+Z)"
               aria-label="Undo last action"
-              className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold
                          transition-all duration-150 focus-ring
                          enabled:text-text-secondary enabled:hover:text-text-primary 
                          enabled:hover:bg-bg-hover enabled:active:scale-95
-                         disabled:text-text-muted/50 disabled:cursor-not-allowed"
+                         disabled:text-text-muted/40 disabled:cursor-not-allowed"
             >
-              <Undo2 size={14} />
+              <Undo2 size={13} />
               <span className="hidden md:inline">Undo</span>
             </button>
 
@@ -157,71 +170,73 @@ const Toolbar = ({ viewMode = 'split', onViewModeChange }) => {
               disabled={!canRedo}
               title="Redo (Ctrl+Shift+Z)"
               aria-label="Redo action"
-              className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold
                          transition-all duration-150 focus-ring
                          enabled:text-text-secondary enabled:hover:text-text-primary 
                          enabled:hover:bg-bg-hover enabled:active:scale-95
-                         disabled:text-text-muted/50 disabled:cursor-not-allowed"
+                         disabled:text-text-muted/40 disabled:cursor-not-allowed"
             >
-              <Redo2 size={14} />
+              <Redo2 size={13} />
               <span className="hidden md:inline">Redo</span>
             </button>
           </div>
 
-          <div className="w-px h-4 bg-border-default mx-0.5" />
+          <div className="w-px h-5 bg-border-default mx-0.5" />
 
-          {/* Import / Export Controls */}
-          <button
-            id="toolbar-export"
-            onClick={() => setShowExport(true)}
-            title="Export or Import Document"
-            aria-label="Export or Import Document"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
-                       transition-all duration-150 focus-ring
-                       text-text-secondary hover:text-text-primary hover:bg-bg-hover active:scale-95"
-          >
-            <Download size={14} />
-            <span className="hidden sm:inline">Export</span>
-          </button>
+          {/* Document Operations: Export / Import */}
+          <div className="flex items-center gap-1.5">
+            <button
+              id="toolbar-export"
+              onClick={() => setShowExport(true)}
+              title="Export Document (JSON / Markdown)"
+              aria-label="Export Document"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
+                         transition-all duration-150 focus-ring border border-border-default
+                         bg-bg-tertiary text-text-primary hover:bg-bg-hover hover:border-border-hover active:scale-95 shadow-xs"
+            >
+              <Download size={13} className="text-text-primary" />
+              <span className="hidden sm:inline">Export</span>
+            </button>
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".txt,.docx"
-            onChange={handleFileImport}
-            className="hidden"
-          />
-          <button
-            id="toolbar-import"
-            onClick={handleImportClick}
-            disabled={importing}
-            title="Import document (.txt, .docx)"
-            aria-label="Import document"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
-                       transition-all duration-150 focus-ring
-                       text-text-secondary hover:text-text-primary hover:bg-bg-hover active:scale-95
-                       disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {importing ? <Loader2 size={14} className="animate-spin" /> : <FileUp size={14} />}
-            <span className="hidden sm:inline">{importing ? 'Importing...' : 'Import'}</span>
-          </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".txt,.docx"
+              onChange={handleFileImport}
+              className="hidden"
+            />
+            <button
+              id="toolbar-import"
+              onClick={handleImportClick}
+              disabled={importing}
+              title="Import Document (.txt, .docx)"
+              aria-label="Import Document"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
+                         transition-all duration-150 focus-ring border border-border-default
+                         bg-bg-tertiary text-text-primary hover:bg-bg-hover hover:border-border-hover active:scale-95
+                         disabled:opacity-40 disabled:cursor-not-allowed shadow-xs"
+            >
+              {importing ? <Loader2 size={13} className="animate-spin" /> : <FileUp size={13} className="text-text-primary" />}
+              <span className="hidden sm:inline">{importing ? 'Importing...' : 'Import'}</span>
+            </button>
+          </div>
 
-          <div className="w-px h-4 bg-border-default mx-0.5" />
+          <div className="w-px h-5 bg-border-default mx-0.5" />
 
-          {/* Danger / Reset Control */}
+          {/* Reset Control */}
           <button
             id="toolbar-clear"
             onClick={clearAll}
             disabled={blocks.length === 0}
-            title="Clear all blocks"
+            title="Clear canvas"
             aria-label="Clear all blocks"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
-                       transition-all duration-150 focus-ring
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
+                       transition-all duration-150 focus-ring border border-transparent
                        enabled:text-text-secondary enabled:hover:text-danger 
-                       enabled:hover:bg-danger-subtle enabled:active:scale-95
-                       disabled:text-text-muted/40 disabled:cursor-not-allowed"
+                       enabled:hover:bg-danger-subtle enabled:hover:border-danger/20 enabled:active:scale-95
+                       disabled:text-text-muted/30 disabled:cursor-not-allowed"
           >
-            <Trash2 size={14} />
+            <Trash2 size={13} />
             <span className="hidden sm:inline">Clear</span>
           </button>
         </div>

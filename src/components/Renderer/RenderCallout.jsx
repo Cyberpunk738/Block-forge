@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import { Info, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
+import formatInlineMarkdown from '../../utils/formatMarkdown';
 
 const VARIANTS = {
   info: {
@@ -45,7 +46,7 @@ const RenderCallout = memo(({ content }) => {
     >
       <IconComponent size={20} className={`shrink-0 mt-0.5 ${config.iconStyle}`} />
       <div className="flex-1 min-w-0">
-        <p className="text-sm leading-relaxed whitespace-pre-wrap font-medium">{text}</p>
+        <p className="text-sm leading-relaxed font-medium">{formatInlineMarkdown(text)}</p>
       </div>
     </aside>
   );
@@ -54,3 +55,4 @@ const RenderCallout = memo(({ content }) => {
 RenderCallout.displayName = 'RenderCallout';
 
 export default RenderCallout;
+

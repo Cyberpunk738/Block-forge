@@ -12,7 +12,7 @@ import { Edit3, Eye } from 'lucide-react';
  * Composes Toolbar, Editor, and LivePreview into responsive split-screen & mobile tabbed layout.
  */
 const App = () => {
-  const [viewMode, setViewMode] = useState('split'); // 'split' | 'editor' | 'preview'
+  const [viewMode, setViewMode] = useState('editor'); // 'editor' | 'preview' | 'split'
   const [mobileTab, setMobileTab] = useState('editor'); // 'editor' | 'preview'
 
   return (
