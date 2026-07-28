@@ -13,7 +13,7 @@ export const formatInlineMarkdown = (text) => {
   // Split by line breaks to preserve multi-line paragraphs cleanly
   const lines = text.split('\n');
 
-  const renderLine = (line, lineIdx) => {
+  const renderLine = (line) => {
     // RegEx patterns for inline elements:
     // 1. Links: [text](url)
     // 2. Bold: **text** or __text__
@@ -108,12 +108,12 @@ export const formatInlineMarkdown = (text) => {
   };
 
   if (lines.length === 1) {
-    return renderLine(lines[0], 0);
+    return renderLine(lines[0]);
   }
 
   return lines.map((line, idx) => (
     <React.Fragment key={idx}>
-      {renderLine(line, idx)}
+      {renderLine(line)}
       {idx < lines.length - 1 && <br />}
     </React.Fragment>
   ));
