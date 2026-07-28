@@ -20,17 +20,19 @@ const LANGUAGES = [
 const CodeBlock = ({ id, content, onUpdate }) => {
   const [code, setCode] = useState(content?.code || '');
   const [language, setLanguage] = useState(content?.language || 'javascript');
+  const [prevContent, setPrevContent] = useState(content);
+
+  if (content !== prevContent) {
+    setPrevContent(content);
+    setCode(content?.code || '');
+    setLanguage(content?.language || 'javascript');
+  }
+
   const [copied, setCopied] = useState(false);
   const [showLangMenu, setShowLangMenu] = useState(false);
   const textareaRef = useRef(null);
   const debounceRef = useRef(null);
   const langMenuRef = useRef(null);
-
-  // Sync from parent (undo/redo)
-  useEffect(() => {
-    setCode(content?.code || '');
-    setLanguage(content?.language || 'javascript');
-  }, [content]);
 
   // Auto-resize
   useEffect(() => {

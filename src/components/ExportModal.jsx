@@ -179,44 +179,50 @@ const ExportModal = ({ isOpen, onClose }) => {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-xs p-4"
       onClick={handleBackdropClick}
       style={{ animation: 'fadeIn 0.15s ease-out forwards' }}
     >
       <div
         ref={modalRef}
-        className="w-full max-w-lg mx-4 bg-bg-secondary border border-border-default rounded-2xl
-                   shadow-2xl shadow-black/50 overflow-hidden"
-        style={{ animation: 'blockSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}
+        className="w-full max-w-lg bg-bg-primary border border-border-default rounded-2xl
+                   shadow-2xl shadow-black/20 overflow-hidden"
+        style={{ animation: 'scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border-default">
-          <h2 className="text-base font-semibold text-text-primary">Export / Import</h2>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border-default bg-bg-secondary/50">
+          <h2 id="modal-title" className="text-sm font-bold text-text-primary tracking-tight">Export / Import Document</h2>
           <button
             id="export-modal-close"
             onClick={onClose}
+            aria-label="Close modal"
             className="p-1.5 rounded-lg text-text-muted hover:text-text-primary 
-                       hover:bg-bg-hover transition-colors duration-150"
+                       hover:bg-bg-hover active:scale-95 transition-all duration-150 focus-ring"
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-border-default">
+        <div className="flex border-b border-border-default bg-bg-secondary/30 px-2 pt-2 gap-1" role="tablist">
           {tabs.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               id={`export-tab-${key}`}
+              role="tab"
+              aria-selected={tab === key}
               onClick={() => switchTab(key)}
-              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium
-                         transition-colors duration-150 border-b-2
+              className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold
+                         transition-all duration-150 rounded-t-lg focus-ring
                          ${tab === key
-                           ? 'text-accent border-accent'
-                           : 'text-text-muted hover:text-text-primary border-transparent'
+                           ? 'text-text-primary bg-bg-primary border-t border-x border-border-default shadow-xs'
+                           : 'text-text-muted hover:text-text-primary hover:bg-bg-hover/50'
                          }`}
             >
-              <Icon size={15} />
+              <Icon size={14} />
               {label}
             </button>
           ))}

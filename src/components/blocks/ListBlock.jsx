@@ -14,15 +14,17 @@ import { List, ListOrdered, Plus, X } from 'lucide-react';
 const ListBlock = ({ id, content, onUpdate }) => {
   const [items, setItems] = useState(content?.items || ['']);
   const [ordered, setOrdered] = useState(content?.ordered || false);
+  const [prevContent, setPrevContent] = useState(content);
+
+  if (content !== prevContent) {
+    setPrevContent(content);
+    setItems(content?.items || ['']);
+    setOrdered(content?.ordered || false);
+  }
+
   const debounceRef = useRef(null);
   const itemRefs = useRef([]);
   const focusNextRef = useRef(null);
-
-  // Sync from parent (undo/redo)
-  useEffect(() => {
-    setItems(content?.items || ['']);
-    setOrdered(content?.ordered || false);
-  }, [content]);
 
   // Focus newly created items
   useEffect(() => {

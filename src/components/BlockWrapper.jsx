@@ -17,7 +17,7 @@ import useStore from '../store/useStore';
  * Props:
  * - block: { id, type, content } — The block data
  */
-const BlockWrapper = memo(({ block }) => {
+const BlockWrapper = memo(({ block, onKeyDown, onFocus }) => {
   const updateBlock = useStore((s) => s.updateBlock);
   const deleteBlock = useStore((s) => s.deleteBlock);
   const addBlock = useStore((s) => s.addBlock);
@@ -67,7 +67,7 @@ const BlockWrapper = memo(({ block }) => {
         style={style}
         className="rounded-xl border border-danger/30 bg-danger-subtle px-4 py-3"
       >
-        <span className="text-sm text-danger">
+        <span className="text-xs font-medium text-danger">
           Unknown block type: <code className="font-mono">"{block.type}"</code>
         </span>
       </div>
@@ -81,43 +81,42 @@ const BlockWrapper = memo(({ block }) => {
       ref={setNodeRef}
       style={style}
       id={`block-${block.id}`}
-      className={`group relative rounded-xl border transition-all duration-200
+      className={`group relative rounded-xl border transition-all duration-200 block-enter
                   ${isDragging
-                    ? 'border-accent bg-bg-active shadow-lg shadow-accent/5 z-50 opacity-50'
-                    : 'border-transparent hover:border-border-default bg-bg-secondary hover:bg-bg-tertiary'
+                    ? 'border-accent/60 bg-bg-primary shadow-2xl shadow-black/10 scale-[1.01] z-50 opacity-95 ring-2 ring-accent/10'
+                    : 'border-border-default/60 hover:border-border-hover bg-bg-secondary hover:bg-bg-primary hover:shadow-sm'
                   }`}
     >
-      {/* ── Block Chrome (visible on hover) ── */}
+      {/* ── Block Chrome (Drag Handle on hover) ── */}
       <div
-        className="absolute -left-10 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1
-                    opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+        className="absolute -left-9 top-1/2 -translate-y-1/2 flex items-center justify-center
+                    opacity-0 group-hover:opacity-100 transition-opacity duration-150"
       >
-        {/* Drag Handle */}
         <button
           {...attributes}
           {...listeners}
-          className="p-1 rounded-md text-text-muted hover:text-text-secondary 
+          className="p-1.5 rounded-lg text-text-muted hover:text-text-primary 
                      hover:bg-bg-hover cursor-grab active:cursor-grabbing
-                     transition-colors duration-150"
-          title="Drag to reorder"
-          aria-label="Drag handle"
+                     transition-colors duration-150 focus-ring"
+          title="Drag to reorder block"
+          aria-label={`Drag handle for ${block.type} block`}
         >
-          <GripVertical size={16} />
+          <GripVertical size={15} />
         </button>
       </div>
 
       {/* ── Action Toolbar (top-right, visible on hover) ── */}
       <div
-        className="absolute -top-3 right-3 flex items-center gap-1 
-                    opacity-0 group-hover:opacity-100 transition-all duration-200
+        className="absolute -top-3 right-3 flex items-center gap-1 z-20
+                    opacity-0 group-hover:opacity-100 transition-all duration-150
                     translate-y-1 group-hover:translate-y-0"
       >
         <button
           id={`block-duplicate-${block.id}`}
           onClick={handleDuplicate}
-          className="p-1.5 rounded-lg bg-bg-tertiary border border-border-default
+          className="p-1.5 rounded-md bg-bg-primary border border-border-default shadow-sm
                      text-text-muted hover:text-text-primary hover:border-border-hover
-                     hover:bg-bg-hover transition-all duration-150"
+                     hover:bg-bg-hover active:scale-95 transition-all duration-150 focus-ring"
           title="Duplicate block"
           aria-label="Duplicate block"
         >
@@ -126,9 +125,9 @@ const BlockWrapper = memo(({ block }) => {
         <button
           id={`block-delete-${block.id}`}
           onClick={handleDelete}
-          className="p-1.5 rounded-lg bg-bg-tertiary border border-border-default
+          className="p-1.5 rounded-md bg-bg-primary border border-border-default shadow-sm
                      text-text-muted hover:text-danger hover:border-danger/30
-                     hover:bg-danger-subtle transition-all duration-150"
+                     hover:bg-danger-subtle active:scale-95 transition-all duration-150 focus-ring"
           title="Delete block"
           aria-label="Delete block"
         >
@@ -142,15 +141,17 @@ const BlockWrapper = memo(({ block }) => {
           id={block.id}
           content={block.content}
           onUpdate={handleUpdate}
+          onKeyDown={onKeyDown ? (e) => onKeyDown(e, block.id, block.type) : undefined}
+          onFocus={onFocus ? () => onFocus(block.id) : undefined}
         />
       </div>
 
       {/* ── Block Type Badge (bottom-right, subtle) ── */}
       <div
         className="absolute bottom-1.5 right-3 opacity-0 group-hover:opacity-100
-                    transition-opacity duration-200"
+                    transition-opacity duration-150 pointer-events-none select-none"
       >
-        <span className="text-[10px] uppercase tracking-wider text-text-muted font-medium">
+        <span className="text-[10px] uppercase tracking-wider text-text-muted/60 font-semibold font-mono">
           {block.type}
         </span>
       </div>

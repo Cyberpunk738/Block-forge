@@ -16,15 +16,17 @@ const ImageBlock = ({ id, content, onUpdate }) => {
   const [alt, setAlt] = useState(content?.alt || '');
   const [hasError, setHasError] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
-  const debounceRef = useRef(null);
+  const [prevContent, setPrevContent] = useState(content);
 
-  // Sync from parent (undo/redo)
-  useEffect(() => {
+  if (content !== prevContent) {
+    setPrevContent(content);
     setUrl(content?.url || '');
     setAlt(content?.alt || '');
     setHasError(false);
     setIsLoaded(false);
-  }, [content]);
+  }
+
+  const debounceRef = useRef(null);
 
   const debouncedUpdate = useCallback((newUrl, newAlt) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);

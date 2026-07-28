@@ -52,14 +52,16 @@ const VARIANT_KEYS = Object.keys(VARIANTS);
 const CalloutBlock = ({ id, content, onUpdate }) => {
   const [text, setText] = useState(content?.text || '');
   const [variant, setVariant] = useState(content?.variant || 'info');
-  const textareaRef = useRef(null);
-  const debounceRef = useRef(null);
+  const [prevContent, setPrevContent] = useState(content);
 
-  // Sync from parent (undo/redo)
-  useEffect(() => {
+  if (content !== prevContent) {
+    setPrevContent(content);
     setText(content?.text || '');
     setVariant(content?.variant || 'info');
-  }, [content]);
+  }
+
+  const textareaRef = useRef(null);
+  const debounceRef = useRef(null);
 
   // Auto-resize
   useEffect(() => {

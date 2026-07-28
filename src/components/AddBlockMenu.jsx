@@ -74,30 +74,36 @@ const AddBlockMenu = () => {
       <button
         id="add-block-button"
         onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+        aria-haspopup="true"
+        aria-label="Add a new block to document"
         className="flex items-center gap-2 px-4 py-2.5 rounded-xl
-                   border border-dashed border-border-default
-                   text-text-muted hover:text-text-primary hover:border-border-hover
-                   hover:bg-bg-tertiary transition-all duration-200 group"
+                   border border-dashed border-border-default bg-bg-secondary/40
+                   text-text-secondary hover:text-text-primary hover:border-border-hover
+                   hover:bg-bg-tertiary active:scale-95 transition-all duration-150 group focus-ring"
       >
         <Plus
-          size={18}
-          className="transition-transform duration-200 group-hover:rotate-90"
+          size={16}
+          className="transition-transform duration-200 group-hover:rotate-90 text-text-muted group-hover:text-text-primary"
         />
-        <span className="text-sm font-medium">Add Block</span>
+        <span className="text-xs font-semibold">Add Block</span>
       </button>
 
       {/* Dropdown Menu */}
       {isOpen && (
         <div
+          role="menu"
+          aria-label="Available block types"
           className="absolute left-0 bottom-full mb-2 w-64 rounded-xl 
-                      bg-bg-secondary border border-border-default shadow-2xl shadow-black/40
-                      py-1.5 z-50"
-          style={{ animation: 'blockSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}
+                      bg-bg-primary border border-border-default shadow-2xl shadow-black/15
+                      py-1.5 z-50 overflow-hidden"
+          style={{ animation: 'scaleIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}
         >
-          <div className="px-3 py-2 border-b border-border-default">
-            <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">
-              Block Types
+          <div className="px-3 py-2 border-b border-border-default bg-bg-secondary/60 flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-text-muted">
+              Select Block Type
             </span>
+            <span className="text-[10px] text-text-muted/70 font-mono">ESC</span>
           </div>
 
           <div className="max-h-72 overflow-y-auto py-1">
@@ -107,17 +113,18 @@ const AddBlockMenu = () => {
                 <button
                   key={type}
                   id={`add-block-${type}`}
+                  role="menuitem"
                   onClick={() => handleAdd(type, defaultData)}
-                  className="flex items-center gap-3 w-full px-3 py-2.5 text-left
-                             text-text-secondary hover:text-text-primary hover:bg-bg-hover
-                             transition-colors duration-150"
+                  className="flex items-center gap-3 w-full px-3 py-2 text-left
+                             text-text-secondary hover:text-text-primary hover:bg-bg-tertiary
+                             transition-colors duration-150 focus-ring"
                 >
-                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent-subtle">
-                    <IconComponent size={16} className="text-accent" />
+                  <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-bg-tertiary text-text-primary shrink-0">
+                    <IconComponent size={15} />
                   </div>
-                  <div>
-                    <span className="text-sm font-medium block">{label}</span>
-                    <span className="text-[11px] text-text-muted">{type} block</span>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-semibold block leading-tight">{label}</span>
+                    <span className="text-[10px] text-text-muted capitalize">/{type}</span>
                   </div>
                 </button>
               );

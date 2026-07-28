@@ -7,16 +7,21 @@ import { useState, useRef, useEffect, useCallback } from 'react';
  * - id: string — Block ID
  * - content: string — Current text content
  * - onUpdate: (content: string) => void — Callback to update store
+ * - onKeyDown: (e: React.KeyboardEvent) => void — Keyboard handler for shortcuts/slash command
+ * - onFocus: () => void — Focus handler
  */
-const TextBlock = ({ id, content, onUpdate }) => {
-  const [localValue, setLocalValue] = useState(content);
+const TextBlock = ({ id, content, onUpdate, onKeyDown, onFocus }) => {
+  const [localValue, setLocalValue] = useState(content || '');
+  const [prevContent, setPrevContent] = useState(content);
+
+  // Sync state during render when prop changes (e.g. undo/redo or external import)
+  if (content !== prevContent) {
+    setPrevContent(content);
+    setLocalValue(content || '');
+  }
+
   const textareaRef = useRef(null);
   const debounceRef = useRef(null);
-
-  // Sync from parent when content changes externally (undo/redo)
-  useEffect(() => {
-    setLocalValue(content);
-  }, [content]);
 
   // Auto-resize textarea to fit content
   useEffect(() => {
@@ -52,15 +57,19 @@ const TextBlock = ({ id, content, onUpdate }) => {
         id={`block-text-${id}`}
         value={localValue}
         onChange={handleChange}
-        placeholder="Start typing..."
+        onKeyDown={onKeyDown}
+        onFocus={onFocus}
+        placeholder="Type text or '/' for commands..."
         rows={1}
         className="w-full bg-transparent text-text-primary placeholder-text-placeholder 
                    text-base leading-relaxed resize-none border-none outline-none 
-                   py-1 px-0 focus-ring rounded-sm"
+                   py-1 px-0 focus-ring rounded-sm transition-colors duration-150"
         spellCheck={true}
+        aria-label="Text block content"
       />
     </div>
   );
 };
 
 export default TextBlock;
+

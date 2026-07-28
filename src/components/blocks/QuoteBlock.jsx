@@ -14,14 +14,16 @@ import { Quote } from 'lucide-react';
 const QuoteBlock = ({ id, content, onUpdate }) => {
   const [text, setText] = useState(content?.text || '');
   const [author, setAuthor] = useState(content?.author || '');
-  const textareaRef = useRef(null);
-  const debounceRef = useRef(null);
+  const [prevContent, setPrevContent] = useState(content);
 
-  // Sync from parent (undo/redo)
-  useEffect(() => {
+  if (content !== prevContent) {
+    setPrevContent(content);
     setText(content?.text || '');
     setAuthor(content?.author || '');
-  }, [content]);
+  }
+
+  const textareaRef = useRef(null);
+  const debounceRef = useRef(null);
 
   // Auto-resize textarea
   useEffect(() => {

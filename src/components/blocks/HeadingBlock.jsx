@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Heading1 } from 'lucide-react';
 
 /**
  * HeadingBlock — Editable heading with level selector (h1–h3).
@@ -10,25 +9,29 @@ import { Heading1 } from 'lucide-react';
  * - id: string — Block ID
  * - content: { text: string, level: number } — Current heading data
  * - onUpdate: (content: object) => void — Callback to update store
+ * - onKeyDown: (e: React.KeyboardEvent) => void — Keyboard handler
  */
 
 const LEVEL_STYLES = {
-  1: 'text-3xl font-bold',
-  2: 'text-2xl font-semibold',
-  3: 'text-xl font-medium',
+  1: 'text-3xl font-bold tracking-tight',
+  2: 'text-2xl font-semibold tracking-tight',
+  3: 'text-xl font-medium tracking-tight',
 };
 
-const HeadingBlock = ({ id, content, onUpdate }) => {
+const HeadingBlock = ({ id, content, onUpdate, onKeyDown }) => {
   const [text, setText] = useState(content?.text || '');
   const [level, setLevel] = useState(content?.level || 1);
-  const inputRef = useRef(null);
-  const debounceRef = useRef(null);
+  const [prevContent, setPrevContent] = useState(content);
 
-  // Sync from parent (undo/redo)
-  useEffect(() => {
+  // Sync state during render when content prop changes (e.g. undo/redo)
+  if (content !== prevContent) {
+    setPrevContent(content);
     setText(content?.text || '');
     setLevel(content?.level || 1);
-  }, [content]);
+  }
+
+  const inputRef = useRef(null);
+  const debounceRef = useRef(null);
 
   const debouncedUpdate = useCallback((newText, newLevel) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -62,9 +65,10 @@ const HeadingBlock = ({ id, content, onUpdate }) => {
         id={`block-heading-level-${id}`}
         onClick={cycleLevel}
         title={`Heading ${level} — Click to cycle`}
-        className="shrink-0 mt-1 flex items-center justify-center w-8 h-8 rounded-md
-                   bg-accent-subtle text-accent hover:bg-accent/20
-                   transition-colors duration-200 text-xs font-bold"
+        aria-label={`Cycle heading level, currently H${level}`}
+        className="shrink-0 mt-1 flex items-center justify-center w-8 h-8 rounded-lg
+                   bg-accent-subtle text-accent hover:bg-bg-hover active:scale-95
+                   transition-all duration-150 text-xs font-bold focus-ring"
       >
         H{level}
       </button>
@@ -76,9 +80,10 @@ const HeadingBlock = ({ id, content, onUpdate }) => {
         type="text"
         value={text}
         onChange={handleTextChange}
+        onKeyDown={onKeyDown}
         placeholder="Heading..."
         className={`w-full bg-transparent text-text-primary placeholder-text-placeholder
-                    border-none outline-none py-1 focus-ring rounded-sm
+                    border-none outline-none py-1 focus-ring rounded-sm transition-all duration-150
                     ${LEVEL_STYLES[level] || LEVEL_STYLES[1]}`}
       />
     </div>
@@ -86,3 +91,4 @@ const HeadingBlock = ({ id, content, onUpdate }) => {
 };
 
 export default HeadingBlock;
+

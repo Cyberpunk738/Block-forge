@@ -72,74 +72,83 @@ const Toolbar = () => {
 
   return (
     <>
-      <div className="flex items-center justify-between px-4 py-3 bg-bg-secondary/80 backdrop-blur-md
-                      border-b border-border-default sticky top-0 z-40">
-        {/* Left: Brand */}
+      <header
+        role="toolbar"
+        aria-label="Editor Toolbar"
+        className="flex items-center justify-between px-4 sm:px-6 py-2.5 bg-bg-secondary/90 backdrop-blur-md
+                   border-b border-border-default sticky top-0 z-40 transition-colors duration-200"
+      >
+        {/* Left: Brand & Autosave Status */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent text-white">
-            <Layers size={18} />
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent text-white shadow-sm">
+            <Layers size={17} />
           </div>
-          <div>
+          <div className="flex items-baseline gap-2.5">
             <h1 className="text-sm font-bold text-text-primary tracking-tight leading-none">
               BlockForge
             </h1>
-            <span className="text-[11px] text-text-muted">
-              {blocks.length} {blocks.length === 1 ? 'block' : 'blocks'}
-            </span>
+            <div className="hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-bg-tertiary border border-border-default text-[11px] text-text-muted font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Saved</span>
+              <span className="text-text-muted/60">•</span>
+              <span>{blocks.length} {blocks.length === 1 ? 'block' : 'blocks'}</span>
+            </div>
           </div>
         </div>
 
-        {/* Right: Actions */}
-        <div className="flex items-center gap-1.5">
-          {/* Undo */}
-          <button
-            id="toolbar-undo"
-            onClick={undo}
-            disabled={!canUndo}
-            title="Undo (Ctrl+Z)"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium
-                       transition-all duration-150
-                       enabled:text-text-secondary enabled:hover:text-text-primary 
-                       enabled:hover:bg-bg-hover
-                       disabled:text-text-muted disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <Undo2 size={15} />
-            <span className="hidden sm:inline">Undo</span>
-          </button>
+        {/* Right: Action Controls Group */}
+        <div className="flex items-center gap-1">
+          {/* History Controls */}
+          <div className="flex items-center gap-0.5 bg-bg-tertiary/50 p-0.5 rounded-lg border border-border-default">
+            <button
+              id="toolbar-undo"
+              onClick={undo}
+              disabled={!canUndo}
+              title="Undo (Ctrl+Z)"
+              aria-label="Undo last action"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium
+                         transition-all duration-150 focus-ring
+                         enabled:text-text-secondary enabled:hover:text-text-primary 
+                         enabled:hover:bg-bg-hover enabled:active:scale-95
+                         disabled:text-text-muted/50 disabled:cursor-not-allowed"
+            >
+              <Undo2 size={14} />
+              <span className="hidden md:inline">Undo</span>
+            </button>
 
-          {/* Redo */}
-          <button
-            id="toolbar-redo"
-            onClick={redo}
-            disabled={!canRedo}
-            title="Redo (Ctrl+Shift+Z)"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium
-                       transition-all duration-150
-                       enabled:text-text-secondary enabled:hover:text-text-primary 
-                       enabled:hover:bg-bg-hover
-                       disabled:text-text-muted disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <Redo2 size={15} />
-            <span className="hidden sm:inline">Redo</span>
-          </button>
+            <button
+              id="toolbar-redo"
+              onClick={redo}
+              disabled={!canRedo}
+              title="Redo (Ctrl+Shift+Z)"
+              aria-label="Redo action"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium
+                         transition-all duration-150 focus-ring
+                         enabled:text-text-secondary enabled:hover:text-text-primary 
+                         enabled:hover:bg-bg-hover enabled:active:scale-95
+                         disabled:text-text-muted/50 disabled:cursor-not-allowed"
+            >
+              <Redo2 size={14} />
+              <span className="hidden md:inline">Redo</span>
+            </button>
+          </div>
 
-          {/* Divider */}
-          <div className="w-px h-5 bg-border-default mx-1" />
+          <div className="w-px h-4 bg-border-default mx-1" />
 
-          {/* Export */}
+          {/* Import / Export Controls */}
           <button
             id="toolbar-export"
             onClick={() => setShowExport(true)}
-            title="Export / Import"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium
-                       transition-all duration-150
-                       text-text-secondary hover:text-text-primary hover:bg-bg-hover"
+            title="Export or Import Document"
+            aria-label="Export or Import Document"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
+                       transition-all duration-150 focus-ring
+                       text-text-secondary hover:text-text-primary hover:bg-bg-hover active:scale-95"
           >
-            <Download size={15} />
+            <Download size={14} />
             <span className="hidden sm:inline">Export</span>
           </button>
 
-          {/* Import Document */}
           <input
             ref={fileInputRef}
             type="file"
@@ -152,35 +161,36 @@ const Toolbar = () => {
             onClick={handleImportClick}
             disabled={importing}
             title="Import document (.txt, .docx)"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium
-                       transition-all duration-150
-                       text-text-secondary hover:text-text-primary hover:bg-bg-hover
+            aria-label="Import document"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
+                       transition-all duration-150 focus-ring
+                       text-text-secondary hover:text-text-primary hover:bg-bg-hover active:scale-95
                        disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {importing ? <Loader2 size={15} className="animate-spin" /> : <FileUp size={15} />}
+            {importing ? <Loader2 size={14} className="animate-spin" /> : <FileUp size={14} />}
             <span className="hidden sm:inline">{importing ? 'Importing...' : 'Import'}</span>
           </button>
 
-          {/* Divider */}
-          <div className="w-px h-5 bg-border-default mx-1" />
+          <div className="w-px h-4 bg-border-default mx-1" />
 
-          {/* Clear All */}
+          {/* Danger / Reset Control */}
           <button
             id="toolbar-clear"
             onClick={clearAll}
             disabled={blocks.length === 0}
             title="Clear all blocks"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium
-                       transition-all duration-150
+            aria-label="Clear all blocks"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
+                       transition-all duration-150 focus-ring
                        enabled:text-text-secondary enabled:hover:text-danger 
-                       enabled:hover:bg-danger-subtle
-                       disabled:text-text-muted disabled:opacity-40 disabled:cursor-not-allowed"
+                       enabled:hover:bg-danger-subtle enabled:active:scale-95
+                       disabled:text-text-muted/40 disabled:cursor-not-allowed"
           >
-            <Trash2 size={15} />
+            <Trash2 size={14} />
             <span className="hidden sm:inline">Clear</span>
           </button>
         </div>
-      </div>
+      </header>
 
       {/* Export Modal */}
       <ExportModal isOpen={showExport} onClose={() => setShowExport(false)} />
