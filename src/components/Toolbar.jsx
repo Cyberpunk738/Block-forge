@@ -1,14 +1,13 @@
 import { useEffect, useState, useRef } from 'react';
-import { Undo2, Redo2, Layers, Trash2, Download, FileUp, Loader2 } from 'lucide-react';
+import { Undo2, Redo2, Layers, Trash2, Download, FileUp, Loader2, Columns, Edit3, Eye } from 'lucide-react';
 import useStore from '../store/useStore';
 import { convertDocumentToBlocks } from '../utils/documentImport';
 import ExportModal from './ExportModal';
 
 /**
- * Toolbar — Top bar with undo/redo, block count, export, and clear all.
- * Also registers keyboard shortcuts (Ctrl+Z, Ctrl+Shift+Z).
+ * Toolbar — Top bar with view switcher, undo/redo, block count, export, and clear all.
  */
-const Toolbar = () => {
+const Toolbar = ({ viewMode = 'split', onViewModeChange }) => {
   const past = useStore((s) => s.past);
   const future = useStore((s) => s.future);
   const blocks = useStore((s) => s.blocks);
@@ -96,8 +95,44 @@ const Toolbar = () => {
           </div>
         </div>
 
-        {/* Right: Action Controls Group */}
-        <div className="flex items-center gap-1">
+        {/* Center/Right: View Mode Selector & Action Controls */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Desktop View Mode Switcher */}
+          {onViewModeChange && (
+            <div className="hidden lg:flex items-center gap-0.5 bg-bg-tertiary/70 p-0.5 rounded-lg border border-border-default mr-1">
+              <button
+                onClick={() => onViewModeChange('split')}
+                title="Split View (Editor + Live Preview)"
+                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold transition-all duration-150 focus-ring ${
+                  viewMode === 'split' ? 'bg-bg-primary text-text-primary shadow-xs' : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                <Columns size={13} />
+                <span>Split</span>
+              </button>
+              <button
+                onClick={() => onViewModeChange('editor')}
+                title="Editor Only"
+                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold transition-all duration-150 focus-ring ${
+                  viewMode === 'editor' ? 'bg-bg-primary text-text-primary shadow-xs' : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                <Edit3 size={13} />
+                <span>Editor</span>
+              </button>
+              <button
+                onClick={() => onViewModeChange('preview')}
+                title="Preview Only"
+                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold transition-all duration-150 focus-ring ${
+                  viewMode === 'preview' ? 'bg-bg-primary text-text-primary shadow-xs' : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                <Eye size={13} />
+                <span>Preview</span>
+              </button>
+            </div>
+          )}
+
           {/* History Controls */}
           <div className="flex items-center gap-0.5 bg-bg-tertiary/50 p-0.5 rounded-lg border border-border-default">
             <button
@@ -133,7 +168,7 @@ const Toolbar = () => {
             </button>
           </div>
 
-          <div className="w-px h-4 bg-border-default mx-1" />
+          <div className="w-px h-4 bg-border-default mx-0.5" />
 
           {/* Import / Export Controls */}
           <button
@@ -171,7 +206,7 @@ const Toolbar = () => {
             <span className="hidden sm:inline">{importing ? 'Importing...' : 'Import'}</span>
           </button>
 
-          <div className="w-px h-4 bg-border-default mx-1" />
+          <div className="w-px h-4 bg-border-default mx-0.5" />
 
           {/* Danger / Reset Control */}
           <button
