@@ -18,11 +18,14 @@ export function markdownToBlocks(md) {
     }
 
     // Fenced code block
-    if (trimmed.startsWith('```')) {
-      const lang = trimmed.slice(3).trim();
+    const fenceMatch = trimmed.match(/^(`{3,}|~{3,})(.*)$/);
+    if (fenceMatch) {
+      const fence = fenceMatch[1];
+      const lang = fenceMatch[2].trim();
+      const closesFence = value => new RegExp(`^${fence[0]}{${fence.length},}\\s*$`).test(value.trim());
       const codeLines = [];
       i++;
-      while (i < lines.length && !lines[i].trim().startsWith('```')) {
+      while (i < lines.length && !closesFence(lines[i])) {
         codeLines.push(lines[i]);
         i++;
       }
@@ -113,6 +116,7 @@ export function markdownToBlocks(md) {
     // Paragraph (one or more non-empty lines)
     const paraLines = [];
     while (i < lines.length && lines[i].trim() !== '') {
+      if (paraLines.length && /^(#{1,6}\s|>|`{3,}|~{3,}|[-*+]\s|\d+\.\s|!\[|(?:-{3,}|\*{3,}|_{3,})$)/.test(lines[i].trim())) break;
       paraLines.push(lines[i]);
       i++;
     }

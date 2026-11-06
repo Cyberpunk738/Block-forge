@@ -42,17 +42,37 @@ Modern productivity applications like **Notion**, **Linear**, **Raycast**, and *
 
 ---
 
+## Document workspace
+
+- Create, name, reopen, duplicate and delete separate documents from a responsive sidebar.
+- Existing `blockforge-blocks` content is recovered as the first document. The new versioned workspace uses `blockforge-workspace-v1`; the legacy entry is retained.
+- Content updates and local persistence happen immediately. Typing in the same block within 700 ms is grouped into one undo step; blur, structural edits and undo/redo end the group.
+- Each document has independent undo/redo history for the current browser session (up to 50 snapshots). Documents and the selected document persist across reloads; history does not.
+- Save failures appear visibly, retain edits in memory, offer retry, and trigger a browser warning before leaving. Invalid stored data is preserved until a backup is downloaded and the user explicitly saves a new workspace.
+- This is a local browser workspace: clearing browser storage removes saved documents. Export important work as JSON for a faithful backup; there is no cloud sync.
+
+## Writing and document files
+
+- **Enter:** split a paragraph or heading at the selection into a following paragraph. **Shift+Enter:** line break in paragraphs.
+- **ArrowUp at the beginning / ArrowDown at the end:** move to the adjacent block input.
+- **Slash at the beginning or after whitespace:** open searchable block commands. Use arrows and Enter to select, Escape to dismiss. Slashes within URLs and words remain ordinary text.
+- Block duplicate/delete controls are visible on touch layouts and available on keyboard focus.
+- Import `.txt`, `.md`, `.markdown`, `.json` or `.docx` files (up to 20 MB). Choose **append** (default) or **replace**; both are undoable, including imports into an empty document.
+- JSON imports validate supported block types, unique IDs and content shapes before modifying the document. Imported IDs are regenerated to avoid collisions when appending.
+- Export JSON, Markdown, or standalone HTML using the document title as the filename. Open the HTML in a browser and choose **Print → Save as PDF** for a print layout. HTML contains no editor controls or scripts and preserves all eight block types.
+- Markdown/DOCX conversion supports the editor's flat block model; complex Word layouts, tables, and nested formatting may be simplified. Use JSON when exact BlockForge block metadata must be preserved.
+
 ## ✨ Highlights & Features
 
 - **👁️ Real-Time Live Preview Panel** — Instant, split-screen published document rendering side panel (~45-50% width) with a `✓ Live` indicator and zero editing chrome.
 - **📱 Responsive Layout & Mobile Tabs** — Side-by-side view on desktop (`Split`, `Editor`, `Preview` modes) and seamless tab switcher (`Editor` | `Live Preview`) on mobile screens without losing editor state.
-- **⚡ Slash Command (`/`) Menu** — Type `/` anywhere inside a text or heading block to launch a floating, keyboard-navigable block selector palette (`ArrowUp`, `ArrowDown`, `Enter`, `ESC`).
+- **⚡ Slash Command (`/`) Menu** — Type `/` at the beginning or after whitespace in a text or heading block to launch a floating, keyboard-navigable block selector palette (`ArrowUp`, `ArrowDown`, `Enter`, `ESC`).
 - **8 Built-in Block Types** — Text, Heading (H1–H3), Image, Code, Quote, List, Divider, and Callout.
 - **Drag & Drop Reordering** — Reorder any block with fluid drag elevation and accessible keyboard coordinates via `dnd-kit`.
 - **Undo / Redo History Stack** — Capped history stack managed by Zustand, supporting `Ctrl+Z` and `Ctrl+Shift+Z` keyboard shortcuts.
-- **Auto-Save Indicator** — Instant local storage persistence with visual status feedback ("Saved").
-- **Document Conversion & Import** — Upload `.txt` or `.docx` files to automatically parse and transform content into structured blocks.
-- **Export Capabilities** — Export document state to clean JSON or formatted Markdown.
+- **Auto-Save Indicator** — Immediate local persistence with truthful success/error feedback and retry.
+- **Document Conversion & Import** — Upload `.txt`, `.md`, `.json` or `.docx` files to automatically parse and transform content into structured blocks.
+- **Export Capabilities** — Export document state to JSON, Markdown or standalone printable HTML.
 - **Plug-and-Play Block Registry** — Extensible block registry allowing developers to introduce new custom block types without editing core editor code.
 - **Accessible & Responsive** — Strict `focus-visible` focus rings, high-contrast monochrome design system, and full ARIA semantics (`role="toolbar"`, `role="dialog"`, `role="menu"`).
 
@@ -122,7 +142,7 @@ Modern productivity applications like **Notion**, **Linear**, **Raycast**, and *
 
 ### 2. Controlled State vs. History Stack Performance
 * **Challenge:** Syncing controlled inputs with a central state store on every keystroke causes heavy re-renders and floods the undo/redo history stack.
-* **Solution:** Block components maintain lightweight local state while emitting debounced updates (400ms) to the Zustand store for history snapshots. Controlled state is synchronized during render when external props change (e.g. on undo/redo actions), avoiding React `useEffect` cascading re-renders.
+* **Solution:** Block components emit immediate updates to the Zustand store. The store groups consecutive typing within 700ms into history snapshots while persisting each content update. Controlled state is synchronized during render when external props change (e.g. on undo/redo actions), avoiding React `useEffect` cascading re-renders.
 
 ### 3. Extensible Block Registry Pattern
 * **Challenge:** Traditional rich text editors tightly couple block rendering with core editor component logic, making third-party extensibility fragile.
@@ -160,8 +180,13 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 | `npm run build` | Build production distribution bundle |
 | `npm run preview` | Locally preview production build |
 | `npm run lint` | Run ESLint checks |
+| `npm test` | Run workspace, editing, import/export and regression tests |
 
 ---
+
+## Validation
+
+GitHub Actions runs tests, lint and the production build for pull requests and pushes to `main` using Node 22. The test suite includes legacy migration, persistence errors and recovery, per-document history, immediate mobile-preview updates, keyboard editing, slash search, JSON validation, Markdown round trips, all block types in HTML and a real DOCX fixture.
 
 ## 🔮 Future Roadmap
 

@@ -1,224 +1,125 @@
 import { create } from 'zustand';
 import { nanoid } from 'nanoid';
+import { validateBlocks } from '../utils/validateBlocks.js';
 
-// ─── Constants ─────────────────────────────────────────────
-const STORAGE_KEY = 'blockforge-blocks';
-const MAX_HISTORY = 50;
+export const STORAGE_KEY = 'blockforge-workspace-v1';
+const clone = value => JSON.parse(JSON.stringify(value));
+const makeDocument = (title = 'Untitled document', blocks = []) => ({ id: nanoid(10), title, blocks, updatedAt: Date.now() });
 
-// ─── Helpers ───────────────────────────────────────────────
-
-/**
- * Load blocks from localStorage.
- * Returns null if nothing is stored or data is invalid.
- */
-const loadFromStorage = () => {
+export function createWorkspaceStore(storage = globalThis.localStorage) {
+  let documents, activeDocumentId, loadError = '';
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
-};
-
-/**
- * Persist blocks array to localStorage.
- */
-const saveToStorage = (blocks) => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(blocks));
-  } catch {
-    // silently fail — storage might be full
-  }
-};
-
-/**
- * Deep clone an array (blocks are plain objects, so JSON roundtrip is safe).
- */
-const deepClone = (arr) => JSON.parse(JSON.stringify(arr));
-
-// ─── Store ─────────────────────────────────────────────────
-
-const useStore = create((set, get) => ({
-  // ── State ──
-  blocks: loadFromStorage() || [],
-  past: [],
-  future: [],
-
-  // ── Internal: push current state to history ──
-  _pushToHistory: () => {
-    const { blocks, past } = get();
-    const newPast = [...past, deepClone(blocks)];
-    // Cap history to prevent memory bloat
-    if (newPast.length > MAX_HISTORY) newPast.shift();
-    set({ past: newPast, future: [] });
-  },
-
-  // ── Block Actions ──
-
-  /**
-   * Add a new block of the given type with default content.
-   * @param {string} type - Block type key (e.g. "text", "image")
-   * @param {*} defaultContent - Default content from the registry
-   * @param {number} [index] - Optional insertion index (appends if omitted)
-   */
-  addBlock: (type, defaultContent, index) => {
-    const state = get();
-    state._pushToHistory();
-
-    const newBlock = {
-      id: nanoid(10),
-      type,
-      content: typeof defaultContent === 'object' && defaultContent !== null
-        ? { ...defaultContent }
-        : defaultContent,
-    };
-
-    const blocks = [...state.blocks];
-    if (typeof index === 'number' && index >= 0 && index <= blocks.length) {
-      blocks.splice(index, 0, newBlock);
+    const raw = storage.getItem(STORAGE_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      if (saved.version !== 1 || !Array.isArray(saved.documents) || !saved.documents.length) throw new Error('Invalid workspace');
+      const ids = new Set();
+      for (const doc of saved.documents) {
+        if (typeof doc.id !== 'string' || !doc.id || ids.has(doc.id) || typeof doc.title !== 'string' || !Number.isFinite(doc.updatedAt)) throw new Error('Invalid document');
+        ids.add(doc.id); validateBlocks(doc.blocks);
+      }
+      documents = saved.documents;
+      activeDocumentId = documents.some(d => d.id === saved.activeDocumentId) ? saved.activeDocumentId : documents[0].id;
     } else {
-      blocks.push(newBlock);
+      const legacy = storage.getItem('blockforge-blocks');
+      documents = [makeDocument(legacy ? 'Recovered document' : undefined, legacy ? validateBlocks(JSON.parse(legacy)) : [])];
     }
-
-    set({ blocks });
-    saveToStorage(blocks);
-  },
-
-  /**
-   * Update a block's content by ID.
-   * @param {string} id - Block ID
-   * @param {*} content - New content (merged if object, replaced otherwise)
-   */
-  updateBlock: (id, content) => {
-    const state = get();
-    state._pushToHistory();
-
-    const blocks = state.blocks.map((block) => {
-      if (block.id !== id) return block;
-      // If both old and new content are objects, merge them
-      const newContent =
-        typeof block.content === 'object' &&
-        block.content !== null &&
-        typeof content === 'object' &&
-        content !== null
-          ? { ...block.content, ...content }
-          : content;
-      return { ...block, content: newContent };
-    });
-
-    set({ blocks });
-    saveToStorage(blocks);
-  },
-
-  /**
-   * Delete a block by ID.
-   * @param {string} id - Block ID
-   */
-  deleteBlock: (id) => {
-    const state = get();
-    state._pushToHistory();
-
-    const blocks = state.blocks.filter((block) => block.id !== id);
-    set({ blocks });
-    saveToStorage(blocks);
-  },
-
-  /**
-   * Move a block from one index to another (used by drag-and-drop).
-   * @param {number} fromIndex - Source index
-   * @param {number} toIndex - Destination index
-   */
-  moveBlock: (fromIndex, toIndex) => {
-    if (fromIndex === toIndex) return;
-
-    const state = get();
-    state._pushToHistory();
-
-    const blocks = [...state.blocks];
-    const [movedBlock] = blocks.splice(fromIndex, 1);
-    blocks.splice(toIndex, 0, movedBlock);
-
-    set({ blocks });
-    saveToStorage(blocks);
-  },
-
-  // ── Undo / Redo ──
-
-  /**
-   * Undo the last action.
-   * Moves current state to `future` and restores from `past`.
-   */
-  undo: () => {
-    const { past, blocks, future } = get();
-    if (past.length === 0) return;
-
-    const newPast = [...past];
-    const previousState = newPast.pop();
-
-    set({
-      past: newPast,
-      blocks: previousState,
-      future: [deepClone(blocks), ...future],
-    });
-
-    saveToStorage(previousState);
-  },
-
-  /**
-   * Redo a previously undone action.
-   * Moves current state to `past` and restores from `future`.
-   */
-  redo: () => {
-    const { past, blocks, future } = get();
-    if (future.length === 0) return;
-
-    const newFuture = [...future];
-    const nextState = newFuture.shift();
-
-    set({
-      past: [...past, deepClone(blocks)],
-      blocks: nextState,
-      future: newFuture,
-    });
-
-    saveToStorage(nextState);
-  },
-
-  /**
-   * Check if undo is available.
-   */
-  canUndo: () => get().past.length > 0,
-
-  /**
-   * Check if redo is available.
-   */
-  canRedo: () => get().future.length > 0,
-
-  /**
-   * Clear all blocks and history.
-   */
-  clearAll: () => {
-    const state = get();
-    if (state.blocks.length > 0) {
-      state._pushToHistory();
-    }
-    set({ blocks: [] });
-    saveToStorage([]);
-  },
-
-  /**
-   * Replace all blocks with a new array (used for imports).
-   */
-  replaceAllBlocks: (newBlocks) => {
-    const state = get();
-    if (state.blocks.length > 0) {
-      state._pushToHistory();
-    }
-    set({ blocks: newBlocks });
-    saveToStorage(newBlocks);
-  },
-}));
-
+  } catch {
+    loadError = 'Saved data could not be loaded. Download the stored backup before saving new work.';
+    documents = [makeDocument()];
+  }
+  activeDocumentId ||= documents[0].id;
+  return create((set, get) => {
+    const persist = () => {
+      const s = get();
+      if (s.recoveryRequired) return;
+      try {
+        storage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, documents: s.documents, activeDocumentId: s.activeDocumentId }));
+        set({ saveStatus: 'saved', saveError: '' });
+      } catch {
+        set({ saveStatus: 'error', saveError: 'Changes are in memory only. Storage is unavailable or full. Export your work or retry saving.' });
+      }
+    };
+    const commit = (blocks, group = null) => {
+      const s = get();
+      if (JSON.stringify(blocks) === JSON.stringify(s.blocks)) return;
+      const now = Date.now(), grouped = group && s.editGroup === group && now - s.lastEdit < 700;
+      set({ blocks, past: grouped ? s.past : [...s.past, clone(s.blocks)].slice(-50), future: [], editGroup: group, lastEdit: now,
+        documents: s.documents.map(d => d.id === s.activeDocumentId ? { ...d, blocks, updatedAt: now } : d) });
+      persist();
+    };
+    const activate = id => {
+      const s = get(), doc = s.documents.find(d => d.id === id);
+      if (!doc || id === s.activeDocumentId) return;
+      const histories = { ...s.histories, [s.activeDocumentId]: { past: s.past, future: s.future } };
+      set({ activeDocumentId: id, blocks: doc.blocks, past: histories[id]?.past || [], future: histories[id]?.future || [], histories, editGroup: null });
+      persist();
+    };
+    return {
+      documents, activeDocumentId, blocks: documents.find(d => d.id === activeDocumentId).blocks,
+      past: [], future: [], histories: {}, editGroup: null, lastEdit: 0,
+      saveStatus: loadError ? 'error' : 'saved', saveError: loadError, recoveryRequired: !!loadError,
+      retrySave: persist,
+      recoverStorage: () => { set({ recoveryRequired: false }); persist(); },
+      getStoredBackup: () => storage.getItem(STORAGE_KEY) || storage.getItem('blockforge-blocks') || '',
+      endEditGroup: () => set({ editGroup: null }),
+      selectDocument: activate,
+      createDocument: () => { const doc = makeDocument(); set({ documents: [...get().documents, doc] }); activate(doc.id); return doc.id; },
+      renameDocument: (id, title) => { set({ documents: get().documents.map(d => d.id === id ? { ...d, title, updatedAt: Date.now() } : d) }); persist(); },
+      duplicateDocument: id => {
+        const source = get().documents.find(d => d.id === id);
+        if (!source) return;
+        const doc = makeDocument(`${source.title || 'Untitled document'} (copy)`, clone(source.blocks).map(b => ({ ...b, id: nanoid(10) })));
+        set({ documents: [...get().documents, doc] }); activate(doc.id);
+      },
+      deleteDocument: id => {
+        const s = get(); let next = s.documents.filter(d => d.id !== id);
+        if (next.length === s.documents.length) return;
+        if (!next.length) next = [makeDocument()];
+        const histories = { ...s.histories }; delete histories[id];
+        set({ documents: next, histories });
+        if (s.activeDocumentId === id) { activate(next[0].id); const h = { ...get().histories }; delete h[id]; set({ histories: h }); }
+        persist();
+      },
+      addBlock: (type, content, index) => {
+        const blocks = [...get().blocks], id = nanoid(10);
+        blocks.splice(Number.isInteger(index) ? Math.max(0, Math.min(index, blocks.length)) : blocks.length, 0, { id, type, content: clone(content) });
+        commit(blocks); return id;
+      },
+      updateBlock: (id, content) => commit(get().blocks.map(b => b.id === id ? { ...b, content: typeof b.content === 'object' && b.content && typeof content === 'object' && content ? { ...b.content, ...content } : content } : b), id),
+      deleteBlock: id => commit(get().blocks.filter(b => b.id !== id)),
+      moveBlock: (from, to) => {
+        const blocks = [...get().blocks];
+        if (from === to || from < 0 || to < 0 || from >= blocks.length || to >= blocks.length) return;
+        blocks.splice(to, 0, blocks.splice(from, 1)[0]); commit(blocks);
+      },
+      splitBlock: (id, start, end) => {
+        const blocks = clone(get().blocks), index = blocks.findIndex(b => b.id === id), block = blocks[index];
+        if (!block || !['text','heading'].includes(block.type)) return;
+        const text = block.type === 'text' ? block.content : block.content.text;
+        if (block.type === 'text') block.content = text.slice(0, start); else block.content.text = text.slice(0, start);
+        const nextId = nanoid(10);
+        blocks.splice(index + 1, 0, { id: nextId, type: 'text', content: text.slice(end) });
+        commit(blocks); return nextId;
+      },
+      undo: () => {
+        const s = get(); if (!s.past.length) return;
+        const blocks = s.past.at(-1);
+        set({ blocks, past: s.past.slice(0,-1), future: [clone(s.blocks), ...s.future], editGroup: null,
+          documents: s.documents.map(d => d.id === s.activeDocumentId ? { ...d, blocks, updatedAt: Date.now() } : d) }); persist();
+      },
+      redo: () => {
+        const s = get(); if (!s.future.length) return;
+        const blocks = s.future[0];
+        set({ blocks, past: [...s.past, clone(s.blocks)].slice(-50), future: s.future.slice(1), editGroup: null,
+          documents: s.documents.map(d => d.id === s.activeDocumentId ? { ...d, blocks, updatedAt: Date.now() } : d) }); persist();
+      },
+      canUndo: () => get().past.length > 0, canRedo: () => get().future.length > 0,
+      clearAll: () => commit([]),
+      replaceAllBlocks: blocks => commit(clone(validateBlocks(blocks))),
+      importBlocks: (blocks, mode = 'replace') => { validateBlocks(blocks); const incoming = clone(blocks).map(b => ({ ...b, id: nanoid(10) })); commit(mode === 'append' ? [...get().blocks, ...incoming] : incoming); },
+    };
+  });
+}
+const useStore = createWorkspaceStore();
 export default useStore;

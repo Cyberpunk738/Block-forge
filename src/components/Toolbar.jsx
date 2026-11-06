@@ -1,8 +1,7 @@
-import { useEffect, useState, useRef } from 'react';
-import { Undo2, Redo2, Layers, Trash2, Download, FileUp, Loader2, Columns, Edit3, Eye } from 'lucide-react';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { Undo2, Redo2, Layers, Trash2, Download, FileUp, Columns, Edit3, Eye } from 'lucide-react';
 import useStore from '../store/useStore';
-import { convertDocumentToBlocks } from '../utils/documentImport';
-import ExportModal from './ExportModal';
+const ExportModal = lazy(() => import('./ExportModal'));
 
 /**
  * Toolbar — Top bar with view switcher, undo/redo, block count, export, and clear all.
@@ -15,32 +14,9 @@ const Toolbar = ({ viewMode = 'split', onViewModeChange }) => {
   const redo = useStore((s) => s.redo);
   const clearAll = useStore((s) => s.clearAll);
 
-  const replaceAllBlocks = useStore((s) => s.replaceAllBlocks);
-
+  const saveStatus = useStore(s => s.saveStatus);
+  const [exportTab, setExportTab] = useState('json');
   const [showExport, setShowExport] = useState(false);
-  const [importing, setImporting] = useState(false);
-  const fileInputRef = useRef(null);
-
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileImport = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setImporting(true);
-    try {
-      const newBlocks = await convertDocumentToBlocks(file);
-      if (newBlocks.length > 0) {
-        replaceAllBlocks(newBlocks);
-      }
-    } catch {
-      // silently fail — user can use the modal for detailed errors
-    } finally {
-      setImporting(false);
-      e.target.value = '';
-    }
-  };
 
   const canUndo = past.length > 0;
   const canRedo = future.length > 0;
@@ -48,18 +24,19 @@ const Toolbar = ({ viewMode = 'split', onViewModeChange }) => {
   // ── Keyboard Shortcuts ──
   useEffect(() => {
     const handleKeyDown = (e) => {
+      if (e.target.closest?.('[role="dialog"], [role="alertdialog"]') || e.target.getAttribute?.('aria-label') === 'Document title' || e.isComposing) return;
       // Ctrl+Z / Cmd+Z = Undo
-      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
         e.preventDefault();
         undo();
       }
       // Ctrl+Shift+Z / Cmd+Shift+Z = Redo
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z') {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'z') {
         e.preventDefault();
         redo();
       }
       // Ctrl+Y / Cmd+Y = Redo (alternative)
-      if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
         e.preventDefault();
         redo();
       }
@@ -87,8 +64,8 @@ const Toolbar = ({ viewMode = 'split', onViewModeChange }) => {
               BlockForge
             </h1>
             <div className="hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-bg-tertiary border border-border-default text-[11px] text-text-muted font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Saved</span>
+              <span className={`w-1.5 h-1.5 rounded-full ${saveStatus === 'saved' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+              <span role="status">{saveStatus === 'saved' ? 'Saved locally' : 'Not saved'}</span>
               <span className="text-text-muted/60">•</span>
               <span>{blocks.length} {blocks.length === 1 ? 'block' : 'blocks'}</span>
             </div>
@@ -187,7 +164,7 @@ const Toolbar = ({ viewMode = 'split', onViewModeChange }) => {
           <div className="flex items-center gap-1.5">
             <button
               id="toolbar-export"
-              onClick={() => setShowExport(true)}
+              onClick={() => { setExportTab('json'); setShowExport(true); }}
               title="Export Document (JSON / Markdown)"
               aria-label="Export Document"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
@@ -198,26 +175,18 @@ const Toolbar = ({ viewMode = 'split', onViewModeChange }) => {
               <span className="hidden sm:inline">Export</span>
             </button>
 
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".txt,.docx"
-              onChange={handleFileImport}
-              className="hidden"
-            />
             <button
               id="toolbar-import"
-              onClick={handleImportClick}
-              disabled={importing}
-              title="Import Document (.txt, .docx)"
+              onClick={() => { setExportTab('import'); setShowExport(true); }}
+              title="Import Document (.txt, .md, .json, .docx)"
               aria-label="Import Document"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
                          transition-all duration-150 focus-ring border border-border-default
                          bg-bg-tertiary text-text-primary hover:bg-bg-hover hover:border-border-hover active:scale-95
                          disabled:opacity-40 disabled:cursor-not-allowed shadow-xs"
             >
-              {importing ? <Loader2 size={13} className="animate-spin" /> : <FileUp size={13} className="text-text-primary" />}
-              <span className="hidden sm:inline">{importing ? 'Importing...' : 'Import'}</span>
+              <FileUp size={13} className="text-text-primary" />
+              <span className="hidden sm:inline">Import</span>
             </button>
           </div>
 
@@ -226,7 +195,7 @@ const Toolbar = ({ viewMode = 'split', onViewModeChange }) => {
           {/* Reset Control */}
           <button
             id="toolbar-clear"
-            onClick={clearAll}
+            onClick={() => { if (window.confirm('Clear all blocks in this document? You can undo this action.')) clearAll(); }}
             disabled={blocks.length === 0}
             title="Clear canvas"
             aria-label="Clear all blocks"
@@ -243,7 +212,9 @@ const Toolbar = ({ viewMode = 'split', onViewModeChange }) => {
       </header>
 
       {/* Export Modal */}
-      <ExportModal isOpen={showExport} onClose={() => setShowExport(false)} />
+      <Suspense fallback={<p role="status">Loading document tools…</p>}>
+      {showExport && <ExportModal key={exportTab + String(showExport)} initialTab={exportTab} isOpen={showExport} onClose={() => setShowExport(false)} />}
+      </Suspense>
     </>
   );
 };

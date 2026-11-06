@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import useAutoResize from '../../hooks/useAutoResize';
+import { useState, useRef, useCallback } from 'react';
 
 /**
  * TextBlock — Editable paragraph block.
@@ -21,34 +22,18 @@ const TextBlock = ({ id, content, onUpdate, onKeyDown, onFocus }) => {
   }
 
   const textareaRef = useRef(null);
-  const debounceRef = useRef(null);
 
   // Auto-resize textarea to fit content
-  useEffect(() => {
-    const el = textareaRef.current;
-    if (el) {
-      el.style.height = 'auto';
-      el.style.height = `${el.scrollHeight}px`;
-    }
-  }, [localValue]);
+  useAutoResize(textareaRef, localValue, 0);
 
-  // Debounced update to store (avoids pushing history on every keystroke)
+  // Update immediately; the store groups typing history
   const handleChange = useCallback((e) => {
     const value = e.target.value;
     setLocalValue(value);
 
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      onUpdate(value);
-    }, 400);
+    onUpdate(value);
   }, [onUpdate]);
 
-  // Cleanup debounce on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
 
   return (
     <div className="group/text">

@@ -1,3 +1,4 @@
+import useAutoResize from '../../hooks/useAutoResize';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Code2, Copy, Check, ChevronDown } from 'lucide-react';
 
@@ -31,17 +32,10 @@ const CodeBlock = ({ id, content, onUpdate }) => {
   const [copied, setCopied] = useState(false);
   const [showLangMenu, setShowLangMenu] = useState(false);
   const textareaRef = useRef(null);
-  const debounceRef = useRef(null);
   const langMenuRef = useRef(null);
 
   // Auto-resize
-  useEffect(() => {
-    const el = textareaRef.current;
-    if (el) {
-      el.style.height = 'auto';
-      el.style.height = `${Math.max(el.scrollHeight, 72)}px`;
-    }
-  }, [code]);
+  useAutoResize(textareaRef, code, 72);
 
   // Close lang menu on outside click
   useEffect(() => {
@@ -54,23 +48,15 @@ const CodeBlock = ({ id, content, onUpdate }) => {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showLangMenu]);
 
-  const debouncedUpdate = useCallback((newCode, newLang) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      onUpdate({ code: newCode, language: newLang });
-    }, 400);
+  const updateContent = useCallback((newCode, newLang) => {
+    onUpdate({ code: newCode, language: newLang });
   }, [onUpdate]);
 
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
 
   const handleCodeChange = (e) => {
     const newCode = e.target.value;
     setCode(newCode);
-    debouncedUpdate(newCode, language);
+    updateContent(newCode, language);
   };
 
   // Allow Tab key inside textarea
@@ -81,7 +67,7 @@ const CodeBlock = ({ id, content, onUpdate }) => {
       const end = e.target.selectionEnd;
       const newCode = code.substring(0, start) + '  ' + code.substring(end);
       setCode(newCode);
-      debouncedUpdate(newCode, language);
+      updateContent(newCode, language);
       // Restore cursor position after React re-render
       requestAnimationFrame(() => {
         e.target.selectionStart = e.target.selectionEnd = start + 2;

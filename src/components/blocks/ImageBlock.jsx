@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { safeUrl } from '../../utils/safeUrl';
+import { useState, useCallback } from 'react';
 import { ImageIcon } from 'lucide-react';
 
 /**
@@ -26,33 +27,24 @@ const ImageBlock = ({ id, content, onUpdate }) => {
     setIsLoaded(false);
   }
 
-  const debounceRef = useRef(null);
 
-  const debouncedUpdate = useCallback((newUrl, newAlt) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      onUpdate({ url: newUrl, alt: newAlt });
-    }, 400);
+  const updateContent = useCallback((newUrl, newAlt) => {
+    onUpdate({ url: newUrl, alt: newAlt });
   }, [onUpdate]);
 
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
 
   const handleUrlChange = (e) => {
     const newUrl = e.target.value;
     setUrl(newUrl);
     setHasError(false);
     setIsLoaded(false);
-    debouncedUpdate(newUrl, alt);
+    updateContent(newUrl, alt);
   };
 
   const handleAltChange = (e) => {
     const newAlt = e.target.value;
     setAlt(newAlt);
-    debouncedUpdate(url, newAlt);
+    updateContent(url, newAlt);
   };
 
   return (
@@ -90,7 +82,7 @@ const ImageBlock = ({ id, content, onUpdate }) => {
       {url && !hasError && (
         <div className="relative overflow-hidden rounded-lg border border-border-default bg-bg-tertiary">
           <img
-            src={url}
+            src={safeUrl(url, true)}
             alt={alt || 'Block image'}
             onLoad={() => setIsLoaded(true)}
             onError={() => setHasError(true)}
