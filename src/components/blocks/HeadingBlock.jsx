@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 
 /**
  * HeadingBlock — Editable heading with level selector (h1–h3).
@@ -31,25 +31,16 @@ const HeadingBlock = ({ id, content, onUpdate, onKeyDown }) => {
   }
 
   const inputRef = useRef(null);
-  const debounceRef = useRef(null);
 
-  const debouncedUpdate = useCallback((newText, newLevel) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      onUpdate({ text: newText, level: newLevel });
-    }, 400);
+  const updateContent = useCallback((newText, newLevel) => {
+    onUpdate({ text: newText, level: newLevel });
   }, [onUpdate]);
 
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
 
   const handleTextChange = (e) => {
     const newText = e.target.value;
     setText(newText);
-    debouncedUpdate(newText, level);
+    updateContent(newText, level);
   };
 
   const cycleLevel = () => {

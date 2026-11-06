@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import useAutoResize from '../../hooks/useAutoResize';
+import { useState, useRef, useCallback } from 'react';
 import { Info, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 
 /**
@@ -61,34 +62,19 @@ const CalloutBlock = ({ id, content, onUpdate }) => {
   }
 
   const textareaRef = useRef(null);
-  const debounceRef = useRef(null);
 
   // Auto-resize
-  useEffect(() => {
-    const el = textareaRef.current;
-    if (el) {
-      el.style.height = 'auto';
-      el.style.height = `${el.scrollHeight}px`;
-    }
-  }, [text]);
+  useAutoResize(textareaRef, text, 0);
 
-  const debouncedUpdate = useCallback((newText, newVariant) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      onUpdate({ text: newText, variant: newVariant });
-    }, 400);
+  const updateContent = useCallback((newText, newVariant) => {
+    onUpdate({ text: newText, variant: newVariant });
   }, [onUpdate]);
 
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
 
   const handleTextChange = (e) => {
     const newText = e.target.value;
     setText(newText);
-    debouncedUpdate(newText, variant);
+    updateContent(newText, variant);
   };
 
   const cycleVariant = () => {

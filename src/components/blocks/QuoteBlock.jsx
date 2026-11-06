@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import useAutoResize from '../../hooks/useAutoResize';
+import { useState, useRef, useCallback } from 'react';
 import { Quote } from 'lucide-react';
 
 /**
@@ -23,40 +24,25 @@ const QuoteBlock = ({ id, content, onUpdate }) => {
   }
 
   const textareaRef = useRef(null);
-  const debounceRef = useRef(null);
 
   // Auto-resize textarea
-  useEffect(() => {
-    const el = textareaRef.current;
-    if (el) {
-      el.style.height = 'auto';
-      el.style.height = `${el.scrollHeight}px`;
-    }
-  }, [text]);
+  useAutoResize(textareaRef, text, 0);
 
-  const debouncedUpdate = useCallback((newText, newAuthor) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      onUpdate({ text: newText, author: newAuthor });
-    }, 400);
+  const updateContent = useCallback((newText, newAuthor) => {
+    onUpdate({ text: newText, author: newAuthor });
   }, [onUpdate]);
 
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
 
   const handleTextChange = (e) => {
     const newText = e.target.value;
     setText(newText);
-    debouncedUpdate(newText, author);
+    updateContent(newText, author);
   };
 
   const handleAuthorChange = (e) => {
     const newAuthor = e.target.value;
     setAuthor(newAuthor);
-    debouncedUpdate(text, newAuthor);
+    updateContent(text, newAuthor);
   };
 
   return (

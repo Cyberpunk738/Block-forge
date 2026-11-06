@@ -32,7 +32,7 @@ const BLOCK_DESCRIPTIONS = {
  * SlashCommandMenu — Floating inline palette triggered by typing '/'.
  * Allows quick searching and insertion/conversion of blocks via keyboard.
  */
-const SlashCommandMenu = ({ isOpen, query = '', onSelect, onClose, position }) => {
+const SlashCommandMenu = ({ isOpen, query = '', onQueryChange, onSelect, onClose, position }) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const menuRef = useRef(null);
 
@@ -61,19 +61,23 @@ const SlashCommandMenu = ({ isOpen, query = '', onSelect, onClose, position }) =
     const handleKeyDown = (e) => {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
+        e.stopPropagation();
         setSelectedIndex((prev) => (filtered.length > 0 ? (prev + 1) % filtered.length : 0));
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
+        e.stopPropagation();
         setSelectedIndex((prev) =>
           filtered.length > 0 ? (prev - 1 + filtered.length) % filtered.length : 0
         );
       } else if (e.key === 'Enter') {
         e.preventDefault();
+        e.stopPropagation();
         if (filtered[selectedIndex]) {
           onSelect(filtered[selectedIndex].type, filtered[selectedIndex].defaultData);
         }
       } else if (e.key === 'Escape') {
         e.preventDefault();
+        e.stopPropagation();
         onClose();
       }
     };
@@ -107,15 +111,13 @@ const SlashCommandMenu = ({ isOpen, query = '', onSelect, onClose, position }) =
         left: position?.left ? `${position.left}px` : 'auto',
         animation: 'scaleIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards',
       }}
-      className="absolute z-50 w-72 max-h-80 overflow-hidden rounded-xl border border-border-default 
+      className="fixed z-50 w-72 max-h-80 overflow-hidden rounded-xl border border-border-default
                  bg-bg-primary shadow-2xl shadow-black/15 flex flex-col"
     >
       {/* Header / Search hint */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-border-default bg-bg-secondary/70">
         <Sparkles size={14} className="text-accent/70" />
-        <span className="text-xs font-medium text-text-secondary">
-          {query ? `Matching "${query}"` : 'Basic Blocks'}
-        </span>
+        <input autoFocus aria-label="Search block types" placeholder="Search blocks…" value={query} onChange={e => onQueryChange(e.target.value)} className="min-w-0 w-full bg-transparent text-xs outline-none focus-ring rounded p-1" />
         <span className="ml-auto text-[10px] text-text-muted font-mono bg-bg-tertiary px-1.5 py-0.5 rounded">
           ESC to cancel
         </span>
@@ -133,7 +135,6 @@ const SlashCommandMenu = ({ isOpen, query = '', onSelect, onClose, position }) =
                 key={type}
                 id={`slash-option-${type}`}
                 role="menuitem"
-                aria-selected={isSelected}
                 onClick={() => onSelect(type, defaultData)}
                 onMouseEnter={() => setSelectedIndex(index)}
                 className={`flex items-start gap-3 w-full px-3 py-2 text-left transition-colors duration-100

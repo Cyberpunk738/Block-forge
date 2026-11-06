@@ -1,4 +1,5 @@
 import React from 'react';
+import { safeUrl } from './safeUrl';
 
 /**
  * Format inline markdown markers (**bold**, *italic*, `code`, ~~strike~~, [link](url))
@@ -43,7 +44,7 @@ export const formatInlineMarkdown = (text) => {
           parts.push(
             <a
               key={key++}
-              href={linkMatch[2]}
+              href={safeUrl(linkMatch[2])}
               target="_blank"
               rel="noopener noreferrer"
               className="text-accent underline font-medium hover:opacity-80 transition-opacity"

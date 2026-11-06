@@ -2,57 +2,17 @@ import { useState, useRef, useEffect } from 'react';
 import { Download, Upload, X, Copy, Check, FileJson, FileText, FileUp, Loader2 } from 'lucide-react';
 import useStore from '../store/useStore';
 import { convertDocumentToBlocks } from '../utils/documentImport';
+import { blocksToMarkdown } from '../utils/blocksToMarkdown';
+import { blocksToHtml, downloadFile } from '../utils/documentExport';
+import { validateBlocks } from '../utils/validateBlocks';
 
-const blocksToMarkdown = (blocks) => {
-  return blocks.map((block) => {
-    switch (block.type) {
-      case 'heading': {
-        const level = block.content?.level || 1;
-        const prefix = '#'.repeat(Math.min(level, 6));
-        return `${prefix} ${block.content?.text || ''}`;
-      }
-      case 'text':
-        return typeof block.content === 'string' ? block.content : '';
-      case 'image': {
-        const alt = block.content?.alt || 'Image';
-        const url = block.content?.url || '';
-        return url ? `![${alt}](${url})` : '';
-      }
-      case 'code': {
-        const lang = block.content?.language || '';
-        const code = block.content?.code || '';
-        return `\`\`\`${lang}\n${code}\n\`\`\``;
-      }
-      case 'quote': {
-        const text = block.content?.text || '';
-        const author = block.content?.author;
-        const lines = text.split('\n').map((l) => `> ${l}`).join('\n');
-        return author ? `${lines}\n> — *${author}*` : lines;
-      }
-      case 'list': {
-        const items = block.content?.items || [];
-        const ordered = block.content?.ordered || false;
-        return items.map((item, i) =>
-          ordered ? `${i + 1}. ${item}` : `- ${item}`
-        ).join('\n');
-      }
-      case 'divider':
-        return '---';
-      case 'callout': {
-        const variant = (block.content?.variant || 'info').toUpperCase();
-        const text = block.content?.text || '';
-        return `> **${variant}:** ${text}`;
-      }
-      default:
-        return `<!-- Unknown block type: ${block.type} -->`;
-    }
-  }).join('\n\n');
-};
-
-const ExportModal = ({ isOpen, onClose }) => {
+const ExportModal = ({ isOpen, onClose, initialTab = 'json' }) => {
   const blocks = useStore((s) => s.blocks);
-  const replaceAllBlocks = useStore((s) => s.replaceAllBlocks);
-  const [tab, setTab] = useState('json');
+  const importBlocks = useStore(s => s.importBlocks);
+  const activeDocument = useStore(s => s.documents.find(d => d.id === s.activeDocumentId));
+  const [importMode, setImportMode] = useState('append');
+  const filename = (activeDocument?.title || 'Untitled document').replace(/[^a-z0-9_-]+/gi, '-').slice(0, 80) || 'document';
+  const [tab, setTab] = useState(initialTab);
   const [copied, setCopied] = useState(false);
   const [importText, setImportText] = useState('');
   const [importError, setImportError] = useState('');
@@ -80,6 +40,21 @@ const ExportModal = ({ isOpen, onClose }) => {
     return () => document.removeEventListener('keydown', handleKey);
   }, [isOpen, onClose]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const previous = document.activeElement;
+    const focusable = () => [...modalRef.current.querySelectorAll('button:not(:disabled), textarea, select, input:not([type="file"])')];
+    focusable()[0]?.focus();
+    const trap = e => {
+      if (e.key !== 'Tab') return;
+      const items = focusable(), first = items[0], last = items.at(-1);
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener('keydown', trap);
+    return () => { document.removeEventListener('keydown', trap); previous?.focus(); };
+  }, [isOpen]);
+
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget) onClose();
   };
@@ -99,15 +74,7 @@ const ExportModal = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleDownload = (content, filename, mimeType) => {
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  const handleDownload = downloadFile;
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -142,7 +109,7 @@ const ExportModal = ({ isOpen, onClose }) => {
         setDocError('No blocks could be extracted from the document.');
         return;
       }
-      replaceAllBlocks(newBlocks);
+      importBlocks(newBlocks, importMode);
       onClose();
     } catch (err) {
       setDocError(err.message || 'Failed to convert document.');
@@ -155,25 +122,18 @@ const ExportModal = ({ isOpen, onClose }) => {
     setImportError('');
     try {
       const parsed = JSON.parse(importText);
-      if (!Array.isArray(parsed)) {
-        setImportError('Invalid format: expected an array of blocks.');
-        return;
-      }
-      const valid = parsed.every((b) => b.id && b.type && 'content' in b);
-      if (!valid) {
-        setImportError('Invalid format: each block needs id, type, and content.');
-        return;
-      }
-      replaceAllBlocks(parsed);
+      validateBlocks(parsed);
+      importBlocks(parsed, importMode);
       onClose();
-    } catch {
-      setImportError('Invalid JSON. Please check your input.');
+    } catch (error) {
+      setImportError(error instanceof SyntaxError ? 'Invalid JSON. Please check your input.' : error.message);
     }
   };
 
   const tabs = [
     { key: 'json', label: 'JSON', icon: FileJson },
     { key: 'markdown', label: 'Markdown', icon: FileText },
+    { key: 'html', label: 'HTML / PDF', icon: FileText },
     { key: 'import', label: 'Import', icon: Upload },
   ];
 
@@ -189,7 +149,7 @@ const ExportModal = ({ isOpen, onClose }) => {
       <div
         ref={modalRef}
         className="w-full max-w-lg bg-bg-primary border border-border-default rounded-2xl
-                   shadow-2xl shadow-black/20 overflow-hidden"
+                   shadow-2xl shadow-black/20 overflow-hidden max-h-[90dvh] overflow-y-auto"
         style={{ animation: 'scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}
       >
         {/* Header */}
@@ -249,7 +209,7 @@ const ExportModal = ({ isOpen, onClose }) => {
                 </button>
                 <button
                   id="export-download-json"
-                  onClick={() => handleDownload(jsonOutput, 'blockforge-export.json', 'application/json')}
+                  onClick={() => handleDownload(jsonOutput, `${filename}.json`, 'application/json')}
                   className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
                              bg-bg-tertiary text-text-secondary border border-border-default
                              hover:text-text-primary hover:border-border-hover 
@@ -281,7 +241,7 @@ const ExportModal = ({ isOpen, onClose }) => {
                 </button>
                 <button
                   id="export-download-md"
-                  onClick={() => handleDownload(markdownOutput, 'blockforge-export.md', 'text/markdown')}
+                  onClick={() => handleDownload(markdownOutput, `${filename}.md`, 'text/markdown')}
                   className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
                              bg-bg-tertiary text-text-secondary border border-border-default
                              hover:text-text-primary hover:border-border-hover 
@@ -294,8 +254,18 @@ const ExportModal = ({ isOpen, onClose }) => {
             </div>
           )}
 
+          {tab === 'html' && <div className="space-y-3">
+            <p className="text-sm text-text-secondary">Download a standalone HTML document. To save as PDF, open the file in your browser and choose Print → Save as PDF.</p>
+            <button className="px-4 py-2 rounded-lg bg-accent text-white focus-ring" onClick={() => handleDownload(blocksToHtml(blocks, activeDocument?.title), `${filename}.html`, 'text/html')}>Download HTML / print to PDF</button>
+          </div>}
           {tab === 'import' && (
             <div className="space-y-5">
+              <label className="block text-sm font-medium">Import destination
+                <select aria-label="Import destination" value={importMode} onChange={e => setImportMode(e.target.value)} className="block w-full mt-2 p-2 rounded border border-border-default bg-bg-primary">
+                  <option value="append">Append to current document</option>
+                  <option value="replace">Replace current document (can be undone)</option>
+                </select>
+              </label>
               {/* Document Import */}
               <div>
                 <h3 className="text-sm font-semibold text-text-primary mb-2 flex items-center gap-2">
@@ -303,7 +273,7 @@ const ExportModal = ({ isOpen, onClose }) => {
                   Import Document
                 </h3>
                 <p className="text-xs text-text-secondary mb-3">
-                  Upload a <strong>.txt</strong> or <strong>.docx</strong> file to convert it into blocks.
+                  Upload a <strong>.txt, .md, .json</strong> or <strong>.docx</strong> file to convert it into blocks.
                 </p>
 
                 <div
@@ -317,7 +287,7 @@ const ExportModal = ({ isOpen, onClose }) => {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".txt,.docx"
+                    accept=".txt,.md,.markdown,.json,.docx"
                     onChange={handleFileChange}
                     className="hidden"
                   />
@@ -336,7 +306,7 @@ const ExportModal = ({ isOpen, onClose }) => {
                       <p className="text-sm text-text-secondary">
                         Drop a file here or click to browse
                       </p>
-                      <p className="text-xs text-text-muted">.txt or .docx files only</p>
+                      <p className="text-xs text-text-muted">.txt, .md, .json or .docx files</p>
                     </div>
                   )}
                 </div>
@@ -374,7 +344,7 @@ const ExportModal = ({ isOpen, onClose }) => {
               <div>
                 <p className="text-sm text-text-secondary mb-2">
                   Paste a BlockForge JSON export to import blocks.
-                  <span className="text-text-muted"> This will replace all current blocks.</span>
+                  <span className="text-text-muted"> Choose append or replace above.</span>
                 </p>
                 <textarea
                   id="export-import-textarea"

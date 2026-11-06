@@ -81,6 +81,7 @@ const BlockWrapper = memo(({ block, onKeyDown, onFocus }) => {
       ref={setNodeRef}
       style={style}
       id={`block-${block.id}`}
+      onBlurCapture={() => useStore.getState().endEditGroup()}
       className={`group relative rounded-xl border transition-all duration-200 block-enter
                   ${isDragging
                     ? 'border-accent/60 bg-bg-primary shadow-2xl shadow-black/10 scale-[1.01] z-50 opacity-95 ring-2 ring-accent/10'
@@ -90,7 +91,7 @@ const BlockWrapper = memo(({ block, onKeyDown, onFocus }) => {
       {/* ── Block Chrome (Drag Handle on hover) ── */}
       <div
         className="absolute -left-9 top-1/2 -translate-y-1/2 flex items-center justify-center
-                    opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                    opacity-100 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100 transition-opacity duration-150"
       >
         <button
           {...attributes}
@@ -108,8 +109,8 @@ const BlockWrapper = memo(({ block, onKeyDown, onFocus }) => {
       {/* ── Action Toolbar (top-right, visible on hover) ── */}
       <div
         className="absolute -top-3 right-3 flex items-center gap-1 z-20
-                    opacity-0 group-hover:opacity-100 transition-all duration-150
-                    translate-y-1 group-hover:translate-y-0"
+                    opacity-100 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100 transition-all duration-150
+                    translate-y-0"
       >
         <button
           id={`block-duplicate-${block.id}`}
@@ -148,7 +149,7 @@ const BlockWrapper = memo(({ block, onKeyDown, onFocus }) => {
 
       {/* ── Block Type Badge (bottom-right, subtle) ── */}
       <div
-        className="absolute bottom-1.5 right-3 opacity-0 group-hover:opacity-100
+        className="absolute bottom-1.5 right-3 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100
                     transition-opacity duration-150 pointer-events-none select-none"
       >
         <span className="text-[10px] uppercase tracking-wider text-text-muted/60 font-semibold font-mono">

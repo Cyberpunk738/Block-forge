@@ -1,3 +1,4 @@
+import { safeUrl } from '../../utils/safeUrl';
 import { memo } from 'react';
 
 /**
@@ -12,7 +13,7 @@ const RenderImage = memo(({ content }) => {
   return (
     <figure className="my-5 space-y-1.5 overflow-hidden rounded-xl border border-border-default bg-bg-secondary">
       <img
-        src={url}
+        src={safeUrl(url, true)}
         alt={alt}
         loading="lazy"
         className="w-full max-h-[420px] object-cover rounded-xl transition-opacity duration-300"

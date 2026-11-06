@@ -29,6 +29,13 @@ const Editor = () => {
   const moveBlock = useStore((s) => s.moveBlock);
   const addBlock = useStore((s) => s.addBlock);
 
+  const activeDocument = useStore(s => s.documents.find(d => d.id === s.activeDocumentId));
+  const focusBlock = (id, atEnd = false) => requestAnimationFrame(() => {
+    const el = document.getElementById(`block-${id}`)?.querySelector('textarea, input');
+    el?.focus();
+    if (el?.setSelectionRange) { const offset = atEnd ? el.value.length : 0; el.setSelectionRange(offset, offset); }
+  });
+
   // ── Slash Command State ──
   const [slashState, setSlashState] = useState({
     isOpen: false,
@@ -69,19 +76,27 @@ const Editor = () => {
   // ── Block KeyDown Handler for Slash Command ──
   const handleBlockKeyDown = useCallback(
     (e, blockId, blockType) => {
-      if (e.key === '/' && (blockType === 'text' || blockType === 'heading')) {
-        const targetEl = e.target;
-        const rect = targetEl.getBoundingClientRect();
-        
-        setSlashState({
-          isOpen: true,
-          blockId,
-          query: '',
-          position: {
-            top: rect.bottom + window.scrollY + 6,
-            left: Math.max(16, rect.left + window.scrollX),
-          },
-        });
+      if (e.nativeEvent?.isComposing || e.isComposing) return;
+      const target = e.target;
+      if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey && /(^|\s)$/.test(target.value.slice(0, target.selectionStart)) && (blockType === 'text' || blockType === 'heading')) {
+        e.preventDefault();
+        const rect = target.getBoundingClientRect();
+        setSlashState({ isOpen: true, blockId, query: '', position: { top: Math.min(rect.bottom + 6, Math.max(8, window.innerHeight - 340)), left: Math.max(8, Math.min(rect.left, window.innerWidth - 296)) } });
+        return;
+      }
+      if (e.ctrlKey || e.metaKey || e.altKey || !['text', 'heading'].includes(blockType)) return;
+      const state = useStore.getState();
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        focusBlock(state.splitBlock(blockId, target.selectionStart, target.selectionEnd));
+      }
+      const index = state.blocks.findIndex(b => b.id === blockId);
+      const start = target.selectionStart, end = target.selectionEnd;
+      if (e.key === 'ArrowUp' && start === 0 && end === 0 && index > 0) {
+        e.preventDefault(); focusBlock(state.blocks[index - 1].id, true);
+      }
+      if (e.key === 'ArrowDown' && start === target.value.length && end === start && index < state.blocks.length - 1) {
+        e.preventDefault(); focusBlock(state.blocks[index + 1].id);
       }
     },
     []
@@ -92,18 +107,23 @@ const Editor = () => {
       const targetIndex = blocks.findIndex((b) => b.id === slashState.blockId);
       const insertIdx = targetIndex >= 0 ? targetIndex + 1 : blocks.length;
       
-      addBlock(type, defaultData, insertIdx);
+      const id = addBlock(type, defaultData, insertIdx);
+      focusBlock(id);
       setSlashState({ isOpen: false, blockId: null, query: '', position: { top: 0, left: 0 } });
     },
     [blocks, slashState.blockId, addBlock]
   );
 
   const handleCloseSlashMenu = useCallback(() => {
+    if (slashState.blockId) focusBlock(slashState.blockId, true);
     setSlashState({ isOpen: false, blockId: null, query: '', position: { top: 0, left: 0 } });
-  }, []);
+  }, [slashState.blockId]);
 
   return (
     <main className="max-w-3xl mx-auto px-4 py-8 min-h-[calc(100vh-57px)] relative">
+      <label className="block mb-6 px-2 text-xs text-text-muted">Document title
+        <input aria-label="Document title" value={activeDocument.title} placeholder="Untitled document" onChange={e => useStore.getState().renameDocument(activeDocument.id, e.target.value)} className="block w-full mt-2 bg-transparent text-2xl font-bold text-text-primary outline-none focus-ring rounded p-1" />
+      </label>
       {/* ── Block List ── */}
       {blocks.length > 0 ? (
         <DndContext
@@ -194,7 +214,7 @@ const Editor = () => {
           <kbd className="px-1.5 py-0.5 rounded bg-bg-tertiary border border-border-default font-mono text-[10px] text-text-secondary">
             /
           </kbd>
-          Slash Command
+          Slash Command · Enter: next paragraph · Shift+Enter: new line
         </span>
         <span className="flex items-center gap-1 text-text-muted/70 ml-auto">
           Drag <span className="text-text-primary font-bold">⠿</span> to reorder
@@ -205,6 +225,7 @@ const Editor = () => {
       <SlashCommandMenu
         isOpen={slashState.isOpen}
         query={slashState.query}
+        onQueryChange={query => setSlashState(s => ({ ...s, query }))}
         onSelect={handleSelectSlashBlock}
         onClose={handleCloseSlashMenu}
         position={slashState.position}

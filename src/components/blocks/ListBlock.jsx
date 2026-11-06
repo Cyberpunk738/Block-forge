@@ -22,7 +22,6 @@ const ListBlock = ({ id, content, onUpdate }) => {
     setOrdered(content?.ordered || false);
   }
 
-  const debounceRef = useRef(null);
   const itemRefs = useRef([]);
   const focusNextRef = useRef(null);
 
@@ -35,24 +34,16 @@ const ListBlock = ({ id, content, onUpdate }) => {
     }
   }, [items]);
 
-  const debouncedUpdate = useCallback((newItems, newOrdered) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      onUpdate({ items: newItems, ordered: newOrdered });
-    }, 400);
+  const updateContent = useCallback((newItems, newOrdered) => {
+    onUpdate({ items: newItems, ordered: newOrdered });
   }, [onUpdate]);
 
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
 
   const handleItemChange = (index, value) => {
     const newItems = [...items];
     newItems[index] = value;
     setItems(newItems);
-    debouncedUpdate(newItems, ordered);
+    updateContent(newItems, ordered);
   };
 
   const handleKeyDown = (e, index) => {
@@ -62,7 +53,7 @@ const ListBlock = ({ id, content, onUpdate }) => {
       newItems.splice(index + 1, 0, '');
       setItems(newItems);
       focusNextRef.current = index + 1;
-      debouncedUpdate(newItems, ordered);
+      updateContent(newItems, ordered);
     }
 
     if (e.key === 'Backspace' && items[index] === '' && items.length > 1) {
@@ -70,7 +61,7 @@ const ListBlock = ({ id, content, onUpdate }) => {
       const newItems = items.filter((_, i) => i !== index);
       setItems(newItems);
       focusNextRef.current = Math.max(0, index - 1);
-      debouncedUpdate(newItems, ordered);
+      updateContent(newItems, ordered);
     }
   };
 
@@ -78,14 +69,14 @@ const ListBlock = ({ id, content, onUpdate }) => {
     if (items.length <= 1) return;
     const newItems = items.filter((_, i) => i !== index);
     setItems(newItems);
-    debouncedUpdate(newItems, ordered);
+    updateContent(newItems, ordered);
   };
 
   const addItem = () => {
     const newItems = [...items, ''];
     setItems(newItems);
     focusNextRef.current = newItems.length - 1;
-    debouncedUpdate(newItems, ordered);
+    updateContent(newItems, ordered);
   };
 
   const toggleOrdered = () => {
@@ -137,7 +128,7 @@ const ListBlock = ({ id, content, onUpdate }) => {
             {items.length > 1 && (
               <button
                 onClick={() => removeItem(index)}
-                className="shrink-0 opacity-0 group-hover/item:opacity-100 p-1 rounded
+                className="shrink-0 opacity-100 lg:opacity-0 lg:group-hover/item:opacity-100 lg:group-focus-within/item:opacity-100 p-1 rounded
                            text-text-muted hover:text-danger hover:bg-danger-subtle
                            transition-all duration-150"
                 title="Remove item"
